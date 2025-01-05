@@ -336,6 +336,11 @@
       "reviewCategory": "tools"
     },
     {
+      "packageName": "@ollimartin/eslint-config",
+      "projectFolder": "packages/eslint-config",
+      "reviewCategory": "tools"
+    },
+    {
       "packageName": "@ollimartin/iobroker.acaad-admin",
       "projectFolder": "apps/iobroker.acaad-admin",
       "reviewCategory": "production"

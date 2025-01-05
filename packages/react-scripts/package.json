@@ -29,7 +29,7 @@
     "css-minimizer-webpack-plugin": "^3.2.0",
     "dotenv": "^10.0.0",
     "dotenv-expand": "^5.1.0",
-    "eslint": "^8.3.0",
+    "eslint": "~9.17.0",
     "eslint-config-react-app": "^7.0.1",
     "eslint-webpack-plugin": "^3.1.1",
     "file-loader": "^6.2.0",
@@ -64,7 +64,11 @@
     "webpack-manifest-plugin": "^4.0.2",
     "workbox-webpack-plugin": "^6.4.1",
     "web-vitals": "~4.2.4",
-    "ts-loader": "~9.5.1"
+    "ts-loader": "~9.5.1",
+    "which": "~5.0.0",
+    "read-pkg-up": "~11.0.0",
+    "yargs-parser": "~21.1.1",
+    "lint-staged": "~15.3.0"
   },
   "devDependencies": {
     "react": "^19.0.0",
