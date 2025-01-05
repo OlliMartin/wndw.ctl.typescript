@@ -1,0 +1,21 @@
+{
+  "name": "@ollimartin/react-scripts",
+  "version": "1.0.0",
+  "files": [
+    "bin",
+    "config",
+    "lib",
+    "scripts",
+    "utils"
+  ],
+  "bin": {
+    "react-scripts": "./bin/react-scripts.js"
+  },
+  "types": "./lib/react-app.d.ts",
+  "dependencies": {},
+  "devDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-scripts": "5.0.1"
+  }
+}
