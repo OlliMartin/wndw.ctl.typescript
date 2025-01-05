@@ -14,7 +14,11 @@
     "ts-loader": "~9.5.1",
     "@types/react": "~19.0.2",
     "@types/react-dom": "~19.0.2",
-    "@ollimartin/eslint-config": "workspace:*"
+    "@ollimartin/eslint-config": "workspace:*",
+    "@iobroker/adapter-react-v5": "~7.4.10",
+    "@iobroker/build-tools": "~2.0.14",
+    "@iobroker/i18n": "~0.3.1",
+    "@iobroker/types": "~7.0.6"
   },
   "scripts": {
     "start": "react-scripts start",
