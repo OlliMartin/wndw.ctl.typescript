@@ -1,16 +1,19 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
-import {
-  GenericApp,
-  GenericAppProps,
-  dictionary,
-  I18n,
-  AdminConnection,
-} from '@iobroker/adapter-react-v5';
+import { GenericApp, GenericAppProps, I18n } from '@iobroker/adapter-react-v5';
 
-import enLocal from './i18n/en.json';
 import deLocal from './i18n/de.json';
+import enLocal from './i18n/en.json';
+import esLocal from './i18n/es.json';
+import frLocal from './i18n/fr.json';
+import itLocal from './i18n/it.json';
+import nlLocal from './i18n/nl.json';
+import plLocal from './i18n/pl.json';
+import ptLocal from './i18n/pt.json';
+import ruLocal from './i18n/ru.json';
+import ukLocal from './i18n/uk.json';
+import zhCnLocal from './i18n/zh-cn.json';
 
 class App extends GenericApp {
   private readonly translations: Record<
@@ -22,11 +25,6 @@ class App extends GenericApp {
     const extendedProps = { ...props };
     extendedProps.encryptedFields = ['pass']; // this parameter will be encrypted and decrypted automatically
 
-    extendedProps.translations = {
-      en: enLocal,
-      de: deLocal,
-    };
-
     // get actual admin port
     extendedProps.socket = { port: parseInt(window.location.port, 10) };
 
@@ -35,15 +33,15 @@ class App extends GenericApp {
     this.translations = {
       en: enLocal,
       de: deLocal,
-      ru: enLocal,
-      pt: enLocal,
-      nl: enLocal,
-      fr: enLocal,
-      it: enLocal,
-      es: enLocal,
-      pl: enLocal,
-      uk: enLocal,
-      'zh-cn': enLocal,
+      ru: ruLocal,
+      pt: ptLocal,
+      nl: nlLocal,
+      fr: frLocal,
+      it: itLocal,
+      es: esLocal,
+      pl: plLocal,
+      uk: ukLocal,
+      'zh-cn': zhCnLocal,
     };
 
     // TODO: Translations commented out

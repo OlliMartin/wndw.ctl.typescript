@@ -24,8 +24,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "lint": "react-scripts lint src",
-    "lint-staged": "react-scripts lint-staged"
+    "lint": "react-scripts lint src"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
