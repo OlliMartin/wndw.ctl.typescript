@@ -331,7 +331,12 @@
    */
   "projects": [
     {
-      "packageName": "iobroker.acaad-admin",
+      "packageName": "@ollimartin/react-scripts",
+      "projectFolder": "packages/react-scripts",
+      "reviewCategory": "tools"
+    },
+    {
+      "packageName": "@ollimartin/iobroker.acaad-admin",
       "projectFolder": "apps/iobroker.acaad-admin",
       "reviewCategory": "production"
     }
