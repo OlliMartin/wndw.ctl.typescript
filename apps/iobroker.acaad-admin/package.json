@@ -55,7 +55,10 @@
     "workbox-webpack-plugin": "^6.4.1",
     "@ollimartin/react-scripts": "workspace:*",
     "web-vitals": "~4.2.4",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "ts-loader": "~9.5.1",
+    "@types/react": "~19.0.2",
+    "@types/react-dom": "~19.0.2"
   },
   "scripts": {
     "start": "react-scripts start",
