@@ -58,9 +58,9 @@ class Acaad extends utils.Adapter {
       native: {},
     });
     this.subscribeStates('testVariable');
-    await this.setStateAsync('testVariable', true);
-    await this.setStateAsync('testVariable', { val: true, ack: true });
-    await this.setStateAsync('testVariable', {
+    this.setState('testVariable', true);
+    this.setState('testVariable', { val: true, ack: true });
+    this.setState('testVariable', {
       val: true,
       ack: true,
       expire: 30,
