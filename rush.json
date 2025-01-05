@@ -344,6 +344,11 @@
       "packageName": "@ollimartin/iobroker.acaad-admin",
       "projectFolder": "apps/iobroker.acaad-admin",
       "reviewCategory": "production"
+    },
+    {
+      "packageName": "@ollimartin/iobroker.acaad",
+      "projectFolder": "apps/iobroker.acaad",
+      "reviewCategory": "production"
     }
     // {
     //   /**

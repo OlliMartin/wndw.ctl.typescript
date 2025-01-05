@@ -1,0 +1,84 @@
+{
+  "common": {
+    "name": "acaad",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
+    },
+    "titleLang": {
+      "en": "Computer as a Device",
+      "de": "Computer als Gerät",
+      "ru": "Компьютер как устройство",
+      "pt": "Computador como um dispositivo",
+      "nl": "Computer als apparaat",
+      "fr": "L'ordinateur en tant qu'appareil",
+      "it": "Il computer come dispositivo",
+      "es": "Computadora como dispositivo",
+      "pl": "Komputer jako urządzenie",
+      "uk": "Комп'ютер як пристрій",
+      "zh-cn": "计算机作为设备"
+    },
+    "desc": {
+      "en": "Allows to turn any computer (windows, linux, mac) into a smart device.",
+      "de": "Ermöglicht die Umwandlung jedes Computers (Windows, Linux, Mac) in ein intelligentes Gerät.",
+      "ru": "Позволяет превратить любой компьютер (Windows, Linux, Mac) в интеллектуальное устройство.",
+      "pt": "Permite transformar qualquer computador (windows, linux, mac) em um dispositivo inteligente.",
+      "nl": "Maakt het mogelijk om van elke computer (Windows, Linux, Mac) een slim apparaat te maken.",
+      "fr": "Permet de transformer n'importe quel ordinateur (windows, linux, mac) en appareil intelligent.",
+      "it": "Permette di trasformare qualsiasi computer (Windows, Linux, Mac) in un dispositivo intelligente.",
+      "es": "Permite convertir cualquier computadora (windows, linux, mac) en un dispositivo inteligente.",
+      "pl": "Pozwala zamienić dowolny komputer (Windows, Linux, Mac) w urządzenie inteligentne.",
+      "uk": "Дозволяє перетворити будь-який комп'ютер (windows, linux, mac) на розумний пристрій.",
+      "zh-cn": "允许将任何计算机（Windows、Linux、Mac）变成智能设备。"
+    },
+    "authors": ["OlliMartin <dev@ollimart.in>"],
+    "keywords": ["windows", "mac", "linux", "windows control", "linux control"],
+    "licenseInformation": {
+      "type": "free",
+      "license": "AGPL-3.0"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "acaad.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/OlliMartin/ioBroker.acaad/main/admin/acaad.png",
+    "readme": "https://github.com/OlliMartin/ioBroker.acaad/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "household",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "adminUI": {
+      "config": "materialize"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": "7.0.23"
+      }
+    ]
+  },
+  "native": {
+    "option1": true,
+    "option2": "42"
+  },
+  "objects": [],
+  "instanceObjects": []
+}
