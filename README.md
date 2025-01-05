@@ -1,0 +1,1 @@
+# wndw.ctl.typescript
