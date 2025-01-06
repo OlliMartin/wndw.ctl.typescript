@@ -23,7 +23,8 @@
     "node": ">= 20"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^3.2.3"
+    "@iobroker/adapter-core": "^3.2.3",
+    "@iobroker/dev-server": "workspace:*"
   },
   "devDependencies": {
     "@iobroker/adapter-dev": "^1.3.0",
@@ -68,7 +69,9 @@
     "test:integration": "mocha test/integration --exit",
     "test": "npm run test:ts && npm run test:package",
     "check": "tsc --noEmit",
-    "translate": "translate-adapter"
+    "translate": "translate-adapter",
+    "ds:setup": "iobroker-dev-server setup -l",
+    "ds:watch": "iobroker-dev-server setup --symlinks"
   },
   "bugs": {
     "url": "https://github.com/OlliMartin/ioBroker.acaad/issues"
