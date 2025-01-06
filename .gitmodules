@@ -1,0 +1,3 @@
+[submodule "packages/oma.dev-server"]
+	path = packages/oma.dev-server
+	url = https://github.com/OlliMartin/oma.dev-server.git

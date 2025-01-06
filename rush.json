@@ -349,6 +349,11 @@
       "packageName": "@ollimartin/iobroker.acaad",
       "projectFolder": "apps/iobroker.acaad",
       "reviewCategory": "production"
+    },
+    {
+      "packageName": "@iobroker/dev-server",
+      "projectFolder": "packages/oma.dev-server",
+      "reviewCategory": "production"
     }
     // {
     //   /**
