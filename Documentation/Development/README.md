@@ -167,6 +167,7 @@ used graphic OpenAPI UI renderer in _any_ way.
 | Data.UOM.Hint  | `$.acaad.unitOfMeasure.hint` | no       | Indicator which _unit of measure_ the component _produces_. (defined in the configuration)                                                  |
 | Actionable     | `$.acaad.actionable`         | no       | Indicator that this component is actionable (`CS` to `ACAAD` sync). MUST be unique (value==true) per component                              |
 | Queryable      | `$.acaad.queryable`          | no       | Indicator that this component is queryable (`ACAAD` to `CS` sync). MUST be unique (value==true) per component                               |
+| Idempotent     | `$.acaad.idempotent`         | yes      | Indicator that the command (attached to the component) is idempotent, meaning that it MAY be retried                                        |
 
 An example endpoint SHOULD be represented like the following json snippet:
 
@@ -193,7 +194,8 @@ An example endpoint SHOULD be represented like the following json snippet:
                 "type": "button",
                 "name": "sample-button"
             },
-            "actionable": true
+            "actionable": true,
+            "idempotent": false
         },
     },
   }
@@ -227,18 +229,153 @@ MUST follow the identical semantics.
 
 ## Device State Management
 
-__ TODO (only bullet points) FROM HERE __
+This section describes how to initially create the corresponding objects in the `CS`s and how to keep them in sync as
+the applications run. A high-level architecture overview will be provided in the form of class diagrams, where the `CS`
+MAY extend (or MUST implement) specific classes/interfaces to fulfill the target platform's needs.
+Mainly those requirements arise from how the platforms deal with different kinds of objects, i.e. the process of
+mapping `ACAAD` components (and their capabilities) to platform-specific devices/objects. The mappings for each
+connected service MUST be defined in detail in the specific documentation section.
 
-- Put event types in [Produces] of respective component endpoint, syncing the event types.
-- Event types must be in a well organized type hierarchy
-- Use the event payload as return type (in positive+negative case) (-> Change delegating executor to return event
-  instead of outcome)
+### Requirements
+
+- All `ACAAD` specific logic MUST be handled in an integration-agnostic (`CS`) manner
+    - Interfaces for integrations, for example how states/components are created MUST be made available (and used)
+- HTTP (and SignalR) connections, requests and response handling MUST NOT be `CS` specific
+    - Connection details, authentication information, etc. MUST be retrieved through an integration-specific layer
+    - Authentication (bearer) tokens MUST be injected by the request pipeline; They MUST NOT be handled in functional
+      code
+    - Token retrieval (during the pipeline execution) MUST use _caching_ and retries. `CS`-agnostic interfaces MUST be
+      provided and used for caching
+- The orchestration of all functionality MUST be owned by the agnostic layer. `CS`-specifics MUST be injected by
+  composition (the following class diagram accounts for this)
+
+### Data Model
+
+The following class diagram partially models the OpenAPI definition and the `ACAAD` specific extensions (defined
+in [Service Discovery](#service-discovery) and [Device Discovery](#device-discovery) respectively.)
+
+``` mermaid
+classDiagram
+direction BT
+
+class AcaadComponentMetadata {
+  type: string
+  name: string
+}
+
+class AcaadDataMetadata {
+  +UnitOfMeasureHint: enum
+}
+
+class AcaadMetadata {
+   +Component: AcaadComponentMetadata
+   +Actionable: bool
+   +Queryable: bool
+   +Idempotent: bool
+}
+
+AcaadMetadata --|> AcaadComponentMetadata : Component
+AcaadMetadata --|> AcaadDataMetadata : Data
+
+class PathItemObject {
+  Acaad: AcaadMetadata
+}
+
+PathItemObject --|>  AcaadMetadata : Acaad
+
+class OpenApiDefinition {
+  Paths: Record~string, PathItemObject~
+}
+
+OpenApiDefinition --|> PathItemObject : Paths
+```
+
+### Orchestration
+
+``` mermaid
+classDiagram
+
+class ComponentDescriptor {
+  +Name: string
+}
+
+class ComponentType {
+  <<enum>>
+  Button,
+  Switch, 
+  Sensor
+}
+
+class Component {
+  +Type: ComponentType
+}
+
+Component --> ComponentDescriptor
+Component --|> ComponentType : Type
+
+class AcaadEvent {
+  +EventType: string
+  +Name: string
+  +ComponentName: string
+}
+
+class IConnectedServiceAdapter {
+  <<interface>>
+  
+  GetComponentDescriptor(component: unknown) Option~ComponentDescriptor~
+  GetComponentDescriptor(metadata: AcaadComponentMetadata) ComponentDescriptor
+  
+  TransformComponentValue(value: Option~unknown~) PRIMITIVE
+  
+  CreateComponentModelAsync(component: Component)
+  
+  UpdateComponentStateAsync(cd: ComponentDescriptor, obj: PRIMITIVE)
+}
+
+class ComponentManager {
+  - ServiceAdapter : ServiceAdapter
+
+  CreateMissingComponentsAsync()
+  - QueryComponentConfigurationAsync(): Option~OpenApiDefinition~
+  
+  HandleOutboundStateChangeAsync(component: unknown, value: Option~unknown~)
+  - HandleSuccessfulStateChangeAsync()
+    
+  HandleInboundStateChangeAsync(event: AcaadEvent)
+  
+  # HandleStateChangeFailureAsync(component: ComponentDescriptor)
+  
+  StartAsync()
+  - OpenSignalRChannelAsync()
+  
+  ShutdownAsync()
+  - CloseSignalRChannelAsync()
+}
+
+ComponentManager --|> IConnectedServiceAdapter : ServiceAdapter
+```
+
+Note: Parameter and return types are shown simplified, i.e. Tasks/Promises are omitted from the diagram. Request
+cancellation MUST be supported, but SHOULD be abstracted away through the agnostic request layer.
+
+In the above diagram all integration-specific concerns are handled by the interface `IConnectedServiceAdapter` a
+reference of which SHOULD be obtained through dependency injection. Presumably not all methods need to be `async`,
+however to avoid unnecessary refactoring overhead during implementation of upcoming `CS` they will be handled
+asynchronously from the beginning.
 
 ### Object/State Creation
 
+__ WORK IN PROGRESS STARTING HERE __
+
+Refer to `ComponentManager.CreateMissingComponentsAsync` in the above class diagram.
+
 ### Sync: CS to ACAAD
 
+Refer to `ComponentManager.HandleOutboundStateChangeAsync` in the above class diagram.
+
 ### Sync: ACAAD to CS
+
+Refer to `ComponentManager.HandleInboundStateChangeAsync` in the above class diagram.
 
 ## Data/State Migration
 
