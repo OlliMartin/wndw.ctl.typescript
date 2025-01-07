@@ -165,6 +165,8 @@ used graphic OpenAPI UI renderer in _any_ way.
 | Component.Type | `$.acaad.component.type`     | yes      | The type of the component. Possible values are defined [here](https://github.com/OlliMartin/wndw.ctl/blob/main/Documentation/Components.md) |
 | Component.Name | `$.acaad.component.name`     | yes      | The unique name of the component (defined in the configuration)                                                                             |
 | Data.UOM.Hint  | `$.acaad.unitOfMeasure.hint` | no       | Indicator which _unit of measure_ the component _produces_. (defined in the configuration)                                                  |
+| Actionable     | `$.acaad.actionable`         | no       | Indicator that this component is actionable (`CS` to `ACAAD` sync). MUST be unique (value==true) per component                              |
+| Queryable      | `$.acaad.queryable`          | no       | Indicator that this component is queryable (`ACAAD` to `CS` sync). MUST be unique (value==true) per component                               |
 
 An example endpoint SHOULD be represented like the following json snippet:
 
@@ -232,6 +234,12 @@ __ TODO (only bullet points) FROM HERE __
 - Use the event payload as return type (in positive+negative case) (-> Change delegating executor to return event
   instead of outcome)
 
+### Object/State Creation
+
+### Sync: CS to ACAAD
+
+### Sync: ACAAD to CS
+
 ## Data/State Migration
 
 ### `ACAAD` Configuration Updates
@@ -240,7 +248,7 @@ __ TODO (only bullet points) FROM HERE __
 - Never delete old component models, let user do it
 - strictly local (server where ACAAD is installed) flow (unless in developer mode)
 
-### `ACAAD` Interface Updates
+## `ACAAD` Interface Updates
 
 - applies to rest and signalR
 - All endpoints versioned (v1, v2, ..) -> match semver (major) of CS
