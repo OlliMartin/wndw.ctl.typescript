@@ -1,0 +1,36 @@
+{
+    "i18n": false,
+    "type": "panel",
+    "items": {
+        "textHdr": {
+            "type": "header",
+            "text": "TEXT",
+            "size": 2
+        },
+        "text1": {
+            "type": "text",
+            "label": "Textinput",
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "numberHdr": {
+            "type": "header",
+            "text": "Service Port",
+            "size": 2
+        },
+        "number1": {
+            "type": "number",
+            "label": "number",
+            "newLine": true,
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        }
+    }
+}
