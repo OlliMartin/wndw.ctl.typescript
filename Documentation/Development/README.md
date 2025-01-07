@@ -336,7 +336,7 @@ class ComponentManager {
   - ServiceAdapter : ServiceAdapter
 
   CreateMissingComponentsAsync()
-  - QueryComponentConfigurationAsync(): Option~OpenApiDefinition~
+  - QueryComponentConfigurationAsync() Option~OpenApiDefinition~
   
   HandleOutboundStateChangeAsync(component: unknown, value: Option~unknown~)
   - HandleSuccessfulStateChangeAsync()
