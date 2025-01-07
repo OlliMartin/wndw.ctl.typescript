@@ -118,8 +118,8 @@ unauthorized access as well.
 
 The service discovery (of `ACAAD` instances) MUST be implemented based on the information provided through an OpenAPI
 definition. The `CS` MUST scan for such definitions (`openapi/v{$VERSION}`), where `$VERSION` is the (compatibility)
-major version of the `CS`. To not match _any_ OpenAPI definition present in the scanned network, an additional check
-SHOULD be performed on the `info` property of the retrieved document.
+major version of the `CS`. To not match _just any_ OpenAPI definition present in the scanned network, an additional
+check SHOULD be performed on the `info` property of the retrieved document.
 
 `ACAAD` MUST advertise itself in the following way:
 
