@@ -82,7 +82,8 @@ sufficient data to uniquely identify the mapped component on `CS` side.
 The event model (hierarchy) MUST be exposed as an
 [OpenAPI schema](https://swagger.io/docs/specification/v3_0/data-models/data-models/) to allow (iterative) generation of
 the respective type hierarchy in the connected service. The process of generating/updating the models SHOULD be added as
-a build step to each `CS`.
+a build step to each `CS` or be set up as a referencable repository to be shared between multiple `CS` (tbd:
+Versioning).
 
 ## Security
 
@@ -109,15 +110,147 @@ cannot be established, for example because the certificate is not found, the con
 
 __EXCEPTION:__ The _only_ exception to the outlined behaviour is if the user actively uses `ACAAD` in _development_
 mode. In this case a warning MUST be written that not all security features are effective. These warnings MUST be
-propagated to all connected `CS` using the described event approach. The `CS` SHOULD make the user aware of such
-configuration issues/concerns.
+propagated to all connected `CS` using the described event approach (see section [ACAAD to CS](#acaad-to-cs)). The `CS`
+SHOULD make the user aware of such configuration issues/concerns. This applies to the usage of `HTTPS` over `HTTP` and
+unauthorized access as well.
+
+## Service Discovery
+
+The service discovery (of `ACAAD` instances) MUST be implemented based on the information provided through an OpenAPI
+definition. The `CS` MUST scan for such definitions (`openapi/v{$VERSION}`), where `$VERSION` is the (compatibility)
+major version of the `CS`. To not match _any_ OpenAPI definition present in the scanned network, an additional check
+SHOULD be performed on the `info` property of the retrieved document.
+
+`ACAAD` MUST advertise itself in the following way:
+
+``` json
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "$title",
+        "version": "$semverVersion",
+        "acaad": "$commitHash"
+    }
+}
+```
+
+where `$title` is a user-definable title (`ACAAD` SHOULD provide a fallback), `$semverVersion` is the `ACAAD` version
+following semantic versioning ([semver](https://semver.org/)) and `$commitHash` is the git commit hash out of which the
+service was built. `ACAAD` SHOULD implement a mechanism to populate the current commit hash in an automated manner.   
+Needless to say, the OpenAPI definition endpoint MUST be publicly available (not protected by authentication) for
+discovery to work.
+Every connected service SHOULD perform a check on the `acaad` (json path `$.info.acaad`) to ensure that a discovery
+OpenAPI definition _certainly_ belongs to an `ACAAD` service.
+To aid the user in the setup process there SHOULD be some kind of feedback including the count of discoverable devices
+per service. Refer to the chapter [Device Discovery](#device-discovery) for more information.
+
+__Note:__ This approach is in accordance with the OpenAPI standard, which explicitly allows extension data (the `acaad`
+property). Refer to [this](https://swagger.io/specification/) document, section `Info Object`.
 
 ## Device Discovery
 
-## Backwards Compatibility
+The device discovery, that is which components/devices are _configured_ on `ACAAD` side, MUST happen based on the
+OpenAPI definition and MUST follow the same versioning guidelines defined in section
+[Service Discovery](#service-discovery). In short: The `CS` MUST use the OpenAPI endpoint corresponding to the _major_
+version of its semver. This ensures compatibility between the two solutions and enforces proper propagation of breaking
+changes.
+
+__Important:__ The augmentation of the OpenAPI document with `ACAAD` specifics MUST NOT inhibit the functionality of the
+used graphic OpenAPI UI renderer in _any_ way.
+
+`ACAAD` MUST provide the following metadata with each _endpoint_ mapping directly to a device/component:
+
+| Type           | JsonPath                     | Required | Description                                                                                                                                 |
+|----------------|------------------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| Component.Type | `$.acaad.component.type`     | yes      | The type of the component. Possible values are defined [here](https://github.com/OlliMartin/wndw.ctl/blob/main/Documentation/Components.md) |
+| Component.Name | `$.acaad.component.name`     | yes      | The unique name of the component (defined in the configuration)                                                                             |
+| Data.UOM.Hint  | `$.acaad.unitOfMeasure.hint` | no       | Indicator which _unit of measure_ the component _produces_. (defined in the configuration)                                                  |
+
+An example endpoint SHOULD be represented like the following json snippet:
+
+``` json
+"/components/sample-button/trigger": {
+    "post": {
+        "tags": [
+            "sample-button"
+        ],
+        "summary": "Trigger",
+        "responses": {
+        "200": {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/ComponentCommandOutcomeEvent"
+                }
+              },
+            }
+        },
+        "acaad": {
+            "component": {
+                "type": "button",
+                "name": "sample-button"
+            },
+            "actionable": true
+        },
+    },
+  }
+},
+```
+
+__Note:__ The additional metadata (property `acaad`) is defined on the path level (in OpenAPI
+terms [PathItemObject](https://swagger.io/specification/)), not on the `PathObject` itself. This leads to data
+duplication, since `ACAAD` is designed to group the components by URL already. However, writing extension data directly
+into the `PathObject` is not (easily) achievable in Asp.Net. Additionally, the overhead of the duplication is minimal
+and the API is called very infrequently; hence it is not worth spending effort to remove the duplication.
+As an added bonus this approach allows providing specific metadata on an endpoint__+method__ basis, for example a
+`Button` component could specify in its `POST:/trigger` endpoint that this endpoint is _actionable_ (as indicated in the
+example above).
+
+During device discovery, the `CS`s SHOULD iterate over all paths (json path `$.paths`), identify all `PathItemObject`s
+that contain the `acaad` metadata property and group by the component's name (`$.paths[..]acaad.name`). This
+computation gives the number of (unique) components configured on `ACAAD`. Additionally, a `CS` MAY group the components
+by type to show as additional information to the user.
+
+As already indicated in the example above the OpenAPI definition MUST include possible API responses (
+`ComponentCommandOutcomeEvent`, not all listed in the example).
+Returning the event types directly from the API exposes them indirectly in the definition, simplifying client
+generation. `ACAAD` MUST use the identical events (for those components) when pushing data via `SignalR`.
+
+## Device Types
+
+The device/component types are defined in
+the [documentation](https://github.com/OlliMartin/wndw.ctl/blob/main/Documentation/Components.md) of `ACAAD`. The `CS`
+MUST follow the identical semantics.
+
+## Device State Management
+
+__ TODO (only bullet points) FROM HERE __
+
+- Put event types in [Produces] of respective component endpoint, syncing the event types.
+- Event types must be in a well organized type hierarchy
+- Use the event payload as return type (in positive+negative case) (-> Change delegating executor to return event
+  instead of outcome)
 
 ## Data/State Migration
 
 ### `ACAAD` Configuration Updates
 
+- Unique identifier is name of device
+- Never delete old component models, let user do it
+- strictly local (server where ACAAD is installed) flow (unless in developer mode)
+
 ### `ACAAD` Interface Updates
+
+- applies to rest and signalR
+- All endpoints versioned (v1, v2, ..) -> match semver (major) of CS
+
+## Development Mode
+
+- Realized via C# feature flag
+- Exposes testing (rest) endpoints for:
+    - configuration updates
+    - command & transformation testing
+    - event recorder (+replay)
+    - allows unauthorized access
+    - MUST log and populate (to CS) warnings
