@@ -59,8 +59,7 @@ class Acaad extends utils.Adapter {
    */
   onUnload(callback) {
     try {
-      callback();
-    } catch (e) {
+    } finally {
       callback();
     }
   }
