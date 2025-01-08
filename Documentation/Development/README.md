@@ -8,10 +8,10 @@
 # Architecture
 
 This documents describes the high level architecture of the services
-consuming [Oma.WndwCtrl](https://github.com/OlliMartin/wndw.ctl) (aka: `ACAAD`).
+consuming [Oma.WndwCtrl](https://github.com/OlliMartin/wndw.ctl) (aka: "__Any Computer as a Device__" `=: ACAAD`).
 As of now, this includes:
 
-- [IoBroker](https://github.com/ioBroker/ioBroker) Adapter
+- [ioBroker](https://github.com/ioBroker/ioBroker) Adapter
 
 For each _connected service_ (`=:CS`) a corresponding documentation detailing the environment/consumer-specifics can be
 found [here](./Integrations).
@@ -23,7 +23,7 @@ about the project.
 
 This section describes assumptions made that apply to all integrations, i.e. platforms consuming
 the [Oma.WndwCtrl](https://github.com/OlliMartin/wndw.ctl)
-service ([IoBroker](https://github.com/ioBroker/ioBroker), [HomeAssistant](https://www.home-assistant.io/), ..).
+service ([ioBroker](https://github.com/ioBroker/ioBroker), [HomeAssistant](https://www.home-assistant.io/), ..).
 Additionally, it defines how `ACAAD` is expected to behave to have a common, "set-in-stone" interface between the
 respective services.
 These assumptions may or may not yet be applicable/implemented on `ACAAD` but will be used as reference in
@@ -365,7 +365,21 @@ asynchronously from the beginning.
 
 ### Object/State Creation
 
-__ WORK IN PROGRESS STARTING HERE __
+`Object/State` creation refers to the process of mapping the `ACAAD` configuration to the integration service's internal
+state management. It involves translating component types (`Button`, `Sensor`, etc.) into the specific data structure
+the broker understands.
+No `CS` MUST ever delete existing, i.e. previously created, states. All configuration MUST be strictly additive, and it
+MUST be the users responsibility to manually clean up. A convenience method to delete _all_ existing states and resync
+from scratch MAY be added, however in that case it MUST be user initiated; Not automatic.
+
+Rationale: It is impossible to know how the components are used by the user in their respective system, so to be on the
+safe side no object deletion is allowed. The same approach is chosen for updated components: If a component changes (for
+example its type) it will remain in the tree unchanged until a manual `resync` action triggered _by the user_.
+The `CS` SHOULD indicate to the user (log) that the full configuration cannot be applied because of previously created
+states.
+
+The `ComponentManager` will be responsible to create the (missing) states: It will collect the information from
+`OpenAPI`, let the `CS` adapter generate the integration-specific objects (i.e. states) in memory and persist them.
 
 Refer to `ComponentManager.CreateMissingComponentsAsync` in the above class diagram.
 
