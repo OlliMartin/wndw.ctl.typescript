@@ -301,6 +301,7 @@ OpenApiDefinition --|> PathItemObject : Paths
 
 ``` mermaid
 classDiagram
+direction BT
 
 class ComponentDescriptor {
   +Name: string
@@ -403,6 +404,7 @@ the [Axios](https://axios-http.com/docs/intro) instance.
 
 ``` mermaid
 classDiagram 
+direction BT
 
 class AcaadAuthentication {
   TokenEndpoint: string
