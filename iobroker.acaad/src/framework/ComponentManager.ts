@@ -1,4 +1,8 @@
-import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
+import {HubConnection, HubConnectionBuilder} from "@microsoft/signalr";
+import IConnectedServiceAdapter from "./interfaces/IConnectedServiceAdapter";
+import Option from "./fp/Option";
+import {OpenApiDefinition} from "./model/open-api/OpenApiDefinition";
+import {AcaadEvent} from "./model/events/AcaadEvent";
 
 class ComponentManager {
     private serviceAdapter: IConnectedServiceAdapter;
@@ -8,9 +12,7 @@ class ComponentManager {
     constructor(serviceAdapter: IConnectedServiceAdapter) {
         this.serviceAdapter = serviceAdapter;
         this.abortController = new AbortController();
-        this.hubConnection = new HubConnectionBuilder()
-            .withUrl("https://your-signalr-endpoint")
-            .build();
+        this.hubConnection = new HubConnectionBuilder().withUrl("https://your-signalr-endpoint").build();
     }
 
     async createMissingComponentsAsync(): Promise<void> {
