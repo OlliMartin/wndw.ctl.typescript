@@ -263,8 +263,15 @@ class AcaadComponentMetadata {
   name: string
 }
 
+class AcaadUnitOfMeasure {
+  <<enum>>
+  Celsius,
+  DeciBel,
+  // Others
+}
+
 class AcaadDataMetadata {
-  +UnitOfMeasureHint: enum
+  +UnitOfMeasureHint: AcaadUnitOfMeasure
 }
 
 class AcaadMetadata {
@@ -325,6 +332,7 @@ class IConnectedServiceAdapter {
   GetComponentDescriptor(component: unknown) Option~ComponentDescriptor~
   GetComponentDescriptor(metadata: AcaadComponentMetadata) ComponentDescriptor
   
+  TransformUnitOfMeasure(uom: AcaadUnitOfMeasure) unknown
   TransformComponentValue(value: Option~unknown~) PRIMITIVE
   
   CreateComponentModelAsync(component: Component)
@@ -389,27 +397,43 @@ Refer to `ComponentManager.HandleOutboundStateChangeAsync` in the above class di
 
 ### Sync: ACAAD to CS
 
+`ACAAD` MUST expose a [SignalR](https://dotnet.microsoft.com/en-us/apps/aspnet/signalr) hub as defined in
+section [Service Connection](#acaad-to-cs). The hub defines one interface to push events to the `CS` which MUST be
+translated into state updates (or otherwise reacted upon depending on the specific type). For state updates, `ACAAD`
+MUST provide the component name inside the event payload, which MUST be translatable to a `ComponentDescriptor` on `CS`
+side. The client used MUST be [@microsoft/signalr](https://www.npmjs.com/package/@microsoft/signalr).
+To obtain the OAuth2 token, which is REQUIRED for secure authentication, the same mechanism as defined in
+the [previous section](#sync-cs-to-acaad) MUST be used.
+
 Refer to `ComponentManager.HandleInboundStateChangeAsync` in the above class diagram.
 
 ## Data/State Migration
 
-### `ACAAD` Configuration Updates
-
-- Unique identifier is name of device
-- Never delete old component models, let user do it
-- strictly local (server where ACAAD is installed) flow (unless in developer mode)
-
 ## `ACAAD` Interface Updates
 
-- applies to rest and signalR
-- All endpoints versioned (v1, v2, ..) -> match semver (major) of CS
+As stated above, the `CS` MUST use its own semver version (major) to determine the `ACAAD` API endpoint to contact. This
+means that breaking changes on `ACAAD` lead directly to a new major in the `CS`s, ensuring compatibility between the two
+services. Any major update _only on the `CS`_ is hence nonsensical.
+
+__Note:__ In the case of vulnerable third party packages that needs to be addressed asap, which would result in a
+breaking change on `CS` side a _compability_ flag or map SHOULD be used to follow a clear semver approach. That means
+the `CS` SHOULD indicate it is compatible _only_ with a previous version of `ACAAD`. This requires some degree of
+attention to detail, as in such an event the `CS` and `ACAAD` major run out of sync and without proper handling the `CS`
+would advertise itself as compatible with an _upcoming_ `ACAAD` version, while it is not. In the end, the `CS` MUST know
+(in a generic way) how many versions `CS` is ahead of `ACAAD`. Since `ACAAD` is always maintaining backwards
+compatibility by versioning the APIs (v1, v2, ...) and hosting _all_ at the same time, no special handling is required
+in that case.
 
 ## Development Mode
 
-- Realized via C# feature flag
-- Exposes testing (rest) endpoints for:
-    - configuration updates
-    - command & transformation testing
-    - event recorder (+replay)
-    - allows unauthorized access
-    - MUST log and populate (to CS) warnings
+`ACAAD` MAY offer a feature called 'Development Mode' which allows the user to _temporarily_ circumvent security
+measures, like the enforcement of a secure transport channel (HTTPS) or use of authentication. Additionally, `ACAAD` MAY
+host convenience endpoints for testing. This includes endpoints for updating the component configuration, testing "
+ad-hoc" commands including execution, transformation files to test the CLI parser, an event recorder that tracks raised
+events directly on `ACAAD` and potentially others.
+
+If the development mode is enabled there MUST be a clear indication to the end-user about the risks, both on `ACAAD` and
+`CS` side.
+Most importantly _enabling_ development mode MUST NOT be possible without administrative access directly to the machine
+where `ACAAD` is running. The enablement flag SHOULD NOT be stored alongside the regular configuration. There MUST be no
+way to enable development mode from within `ACAAD`. It MUST be a manual (elevated-permission) user interaction.
