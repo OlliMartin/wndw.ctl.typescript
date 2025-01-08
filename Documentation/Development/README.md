@@ -342,6 +342,7 @@ class IConnectedServiceAdapter {
 
 class ComponentManager {
   - ServiceAdapter : ServiceAdapter
+  - AbortController : AbortController
 
   CreateMissingComponentsAsync()
   - QueryComponentConfigurationAsync() Option~OpenApiDefinition~
@@ -354,7 +355,7 @@ class ComponentManager {
   # HandleStateChangeFailureAsync(component: ComponentDescriptor)
   
   StartAsync()
-  - OpenSignalRChannelAsync()
+  - OpenSignalRChannelAsync(abortSignal: AbortSignal)
   
   ShutdownAsync()
   - CloseSignalRChannelAsync()
@@ -364,7 +365,8 @@ ComponentManager --|> IConnectedServiceAdapter : ServiceAdapter
 ```
 
 Note: Parameter and return types are shown simplified, i.e. Tasks/Promises are omitted from the diagram. Request
-cancellation MUST be supported, but SHOULD be abstracted away through the agnostic request layer.
+cancellation MUST be supported, but SHOULD be abstracted away through the agnostic request layer. For this purpose
+`AbortController` and `AbortSignal`s are used, which are supported by both `Axios` and `SignalR`.
 
 In the above diagram all integration-specific concerns are handled by the interface `IConnectedServiceAdapter` a
 reference of which SHOULD be obtained through dependency injection. Presumably not all methods need to be `async`,
@@ -393,7 +395,59 @@ Refer to `ComponentManager.CreateMissingComponentsAsync` in the above class diag
 
 ### Sync: CS to ACAAD
 
-Refer to `ComponentManager.HandleOutboundStateChangeAsync` in the above class diagram.
+The synchronization of outbound state changes, that means a user manually (or automated) changing the state of a
+component in the integration, MUST be synced utilizing the exposed (component) ReST apis. For this, first the host of
+the `ACAAD` service is retrieved and the OAuth2 token is injected (as an axios aspect/interceptor). The `CS`-agnostic
+layer MUST provide a class `ConnectionManager` to execute requests against component APIs, which aggregates
+the [Axios](https://axios-http.com/docs/intro) instance.
+
+``` mermaid
+classDiagram 
+
+class AcaadAuthentication {
+  TokenEndpoint: string
+  ClientId: string
+  ClientSecret: string,
+  Grants: Array~string~
+}
+
+class AcaadHost {
+  Host: string
+  Port: number
+}
+
+class OAuth2Token {
+  Epires: number,
+  AccessToken: string,
+  RefreshToken: string,
+  Grants: Array~string~
+}
+
+AcaadHost --|> AcaadAuthentication : Authentication
+
+class TokenCache {
+  <<interface>>
+  GetAsync(authentication: AcaadAuthentication) Option~OAuth2Token~
+}
+
+class ConnectionManager {
+  -Axios: Axios
+  -TokenCache: TokenCache
+  
+  -RetrieveAuthenticationAsync(): OAuth2Token
+  
+  +QueryComponentConfigurationAsync(host: AcaadHost) Option~OpenApiDefinition~
+  
+  +UpdateComponentStateAsync(metadata: AcaadMetadata, value: Option<PRIMITIVE>)
+}
+
+ConnectionManager --|> TokenCache : TokenCache
+```
+
+__Note:__ Boilerplate parameters and return types, such as `AbortSignal` and `Promise<T>` are omitted from the above
+class diagram for readability.
+
+Refer to `ComponentManager.HandleOutboundStateChangeAsync` in the general architecture section.
 
 ### Sync: ACAAD to CS
 
@@ -406,8 +460,6 @@ To obtain the OAuth2 token, which is REQUIRED for secure authentication, the sam
 the [previous section](#sync-cs-to-acaad) MUST be used.
 
 Refer to `ComponentManager.HandleInboundStateChangeAsync` in the above class diagram.
-
-## Data/State Migration
 
 ## `ACAAD` Interface Updates
 
