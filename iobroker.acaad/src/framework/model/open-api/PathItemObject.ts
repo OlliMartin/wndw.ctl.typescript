@@ -1,4 +1,4 @@
-import { AcaadMetadata } from "./AcaadMetadata";
+import { AcaadMetadata } from "../AcaadMetadata";
 
 export class PathItemObject {
     acaad: AcaadMetadata;

@@ -1,10 +1,16 @@
-import axios, {AxiosInstance} from "axios";
+import axios, { AxiosInstance } from "axios";
+import { AcaadMetadata } from "./model/AcaadMetadata";
+import Option from "./fp/Option";
+import { OpenApiDefinition } from "./model/open-api/OpenApiDefinition";
+import { AcaadHost } from "./model/connection/AcaadHost";
+import { OAuth2Token } from "./model/auth/OAuth2Token";
+import { ITokenCache } from "./interfaces/ITokenCache";
 
 class ConnectionManager {
     private axiosInstance: AxiosInstance;
-    private tokenCache: TokenCache;
+    private tokenCache: ITokenCache;
 
-    constructor(tokenCache: TokenCache) {
+    constructor(tokenCache: ITokenCache) {
         this.axiosInstance = axios.create();
         this.tokenCache = tokenCache;
     }

@@ -1,4 +1,4 @@
-import {AcaadComponentMetadata} from './AcaadComponentMetadata';
+import { AcaadComponentMetadata } from "./AcaadComponentManager";
 
 export class AcaadMetadata {
     component: AcaadComponentMetadata;

@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": ["../../src/services/TestService.ts"],
-  "sourcesContent": ["import {singleton} from \"tsyringe\";\r\nimport Logger = ioBroker.Logger;\r\n\r\n@singleton()\r\nclass TestService {\r\n    LogSomething(log: Logger): void {\r\n        log.info('Hello world!');        \r\n    }\r\n}\r\n\r\nexport { TestService };"],
-  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,sBAAwB;AAIxB,IAAM,cAAN,MAAkB;AAAA,EACd,aAAa,KAAmB;AAC5B,QAAI,KAAK,cAAc;AAAA,EAC3B;AACJ;AAJM,cAAN;AAAA,MADC,2BAAU;AAAA,GACL;",
+  "sourcesContent": ["import { singleton } from \"tsyringe\";\nimport Logger = ioBroker.Logger;\n\n@singleton()\nclass TestService {\n    LogSomething(log: Logger): void {\n        log.info(\"Hello world!\");\n    }\n}\n\nexport { TestService };\n"],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,sBAA0B;AAI1B,IAAM,cAAN,MAAkB;AAAA,EACd,aAAa,KAAmB;AAC5B,QAAI,KAAK,cAAc;AAAA,EAC3B;AACJ;AAJM,cAAN;AAAA,MADC,2BAAU;AAAA,GACL;",
   "names": []
 }
