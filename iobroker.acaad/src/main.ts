@@ -1,7 +1,7 @@
 import * as utils from "@iobroker/adapter-core";
 import "reflect-metadata";
-import {container} from "tsyringe";
-import {TestService} from "./services/TestService";
+import { container } from "tsyringe";
+import { TestService } from "./services/TestService";
 
 class Acaad extends utils.Adapter {
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
