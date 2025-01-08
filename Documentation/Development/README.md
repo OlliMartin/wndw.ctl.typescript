@@ -419,7 +419,7 @@ class AcaadHost {
 }
 
 class OAuth2Token {
-  Epires: number,
+  Expires: number,
   AccessToken: string,
   RefreshToken: string,
   Grants: Array~string~
