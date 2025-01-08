@@ -427,14 +427,14 @@ class OAuth2Token {
 
 AcaadHost --|> AcaadAuthentication : Authentication
 
-class TokenCache {
+class ITokenCache {
   <<interface>>
   GetAsync(authentication: AcaadAuthentication) Option~OAuth2Token~
 }
 
 class ConnectionManager {
   -Axios: Axios
-  -TokenCache: TokenCache
+  -TokenCache: ITokenCache
   
   -RetrieveAuthenticationAsync(): OAuth2Token
   
@@ -443,7 +443,7 @@ class ConnectionManager {
   +UpdateComponentStateAsync(metadata: AcaadMetadata, value: Option<PRIMITIVE>)
 }
 
-ConnectionManager --|> TokenCache : TokenCache
+ConnectionManager --|> ITokenCache : TokenCache
 ```
 
 __Note:__ Boilerplate parameters and return types, such as `AbortSignal` and `Promise<T>` are omitted from the above
