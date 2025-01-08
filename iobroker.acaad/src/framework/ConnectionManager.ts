@@ -6,7 +6,7 @@ import { AcaadHost } from "./model/connection/AcaadHost";
 import { OAuth2Token } from "./model/auth/OAuth2Token";
 import { ITokenCache } from "./interfaces/ITokenCache";
 
-class ConnectionManager {
+export default class ConnectionManager {
     private axiosInstance: AxiosInstance;
     private tokenCache: ITokenCache;
 

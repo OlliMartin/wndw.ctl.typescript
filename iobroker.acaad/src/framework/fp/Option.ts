@@ -1,6 +1,5 @@
 class Option<T> {
-    private constructor(private value: T | null) {
-    }
+    private constructor(private value: T | null) {}
 
     static Some<T>(value: T): Option<T> {
         if (value === null || value === undefined) {

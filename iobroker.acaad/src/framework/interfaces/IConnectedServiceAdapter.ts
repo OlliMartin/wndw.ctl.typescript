@@ -1,8 +1,8 @@
 import Option from "../fp/Option";
-import {ComponentDescriptor} from "../model/ComponentDescriptor";
-import {AcaadComponentMetadata} from "../model/AcaadComponentManager";
-import {AcaadUnitOfMeasure} from "../model/AcaadUnitOfMeasure";
-import {Component} from "../model/Component";
+import { ComponentDescriptor } from "../model/ComponentDescriptor";
+import { AcaadComponentMetadata } from "../model/AcaadComponentManager";
+import { AcaadUnitOfMeasure } from "../model/AcaadUnitOfMeasure";
+import { Component } from "../model/Component";
 
 interface IConnectedServiceAdapter {
     getComponentDescriptor(component: unknown): Option<ComponentDescriptor>;
