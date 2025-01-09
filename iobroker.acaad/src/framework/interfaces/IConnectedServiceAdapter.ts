@@ -3,9 +3,10 @@ import { AcaadComponentMetadata } from "../model/AcaadComponentManager";
 import { AcaadUnitOfMeasure } from "../model/AcaadUnitOfMeasure";
 import { Component } from "../model/Component";
 import { AcaadHost } from "../model/connection/AcaadHost";
-import { Option } from "fp-ts/Option";
-import { TaskEither } from "fp-ts/TaskEither";
+
 import { AcaadError } from "../errors/AcaadError";
+import { Effect } from "effect";
+import { Option } from "effect/Option";
 
 interface IConnectedServiceAdapter {
     getComponentDescriptor(component: unknown): Option<ComponentDescriptor>;
@@ -20,7 +21,7 @@ interface IConnectedServiceAdapter {
 
     updateComponentStateAsync(cd: ComponentDescriptor, obj: unknown): Promise<void>;
 
-    getConnectedServerAsync(): TaskEither<AcaadError, AcaadHost>;
+    getConnectedServerAsync(): Effect.Effect<AcaadHost, AcaadError>;
 }
 
 export default IConnectedServiceAdapter;

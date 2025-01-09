@@ -1,9 +1,5 @@
 import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
 import IConnectedServiceAdapter from "./interfaces/IConnectedServiceAdapter";
-import { Option, map, match } from "fp-ts/Option";
-import * as O from "fp-ts/Option";
-import { either, task, taskEither } from "fp-ts";
-import { pipe } from "fp-ts/function";
 import { OpenApiDefinition } from "./model/open-api/OpenApiDefinition";
 import { AcaadEvent } from "./model/events/AcaadEvent";
 import { inject, injectable } from "tsyringe";
@@ -12,8 +8,9 @@ import { ICsLogger } from "./interfaces/IConnectedServiceContext";
 import ConnectionManager from "./ConnectionManager";
 import { AcaadHost } from "./model/connection/AcaadHost";
 import { AcaadAuthentication } from "./model/auth/AcaadAuthentication";
-import { TaskEither } from "fp-ts/TaskEither";
 import { AcaadError } from "./errors/AcaadError";
+import { pipe, Effect } from "effect";
+import { Option } from "effect/Option";
 
 @injectable()
 export default class ComponentManager {
@@ -44,24 +41,19 @@ export default class ComponentManager {
             "Syncing components from ACAAD server. This operation will never remove existing states.",
         );
 
-        const res = await pipe(
-            task.of(2),
-            task.chain((x) => task.of(x + 1)),
-        )();
-
         const callChain = this.queryComponentConfigurationAsync();
 
-        const result = await callChain();
+        const result = await Effect.runPromise(callChain);
         console.log(result);
     }
 
-    private queryComponentConfigurationAsync(): TaskEither<AcaadError, OpenApiDefinition> {
-        const fpTest = pipe(
+    private queryComponentConfigurationAsync(): Effect.Effect<OpenApiDefinition, AcaadError> {
+        const callChain = pipe(
             this.serviceAdapter.getConnectedServerAsync(),
-            taskEither.chain(this.connectionManager.queryComponentConfigurationAsync),
+            Effect.andThen(this.connectionManager.queryComponentConfigurationAsync),
         );
 
-        return fpTest;
+        return callChain;
     }
 
     private async updateConnectedServiceModelAsync(config: OpenApiDefinition): Promise<void> {

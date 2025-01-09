@@ -7,10 +7,9 @@ import { inject, injectable, singleton } from "tsyringe";
 import { IoBrokerContext } from "./IoBroker.Context";
 import { AcaadHost } from "../framework/model/connection/AcaadHost";
 import { AcaadAuthentication } from "../framework/model/auth/AcaadAuthentication";
-import { TaskEither } from "fp-ts/TaskEither";
 import { AcaadError } from "../framework/errors/AcaadError";
-import * as E from "fp-ts/Either";
-import { Option } from "fp-ts/Option";
+import { pipe, Effect } from "effect";
+import { Option } from "effect/Option";
 
 @singleton()
 @injectable()
@@ -21,11 +20,11 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
         this._ioBrokerContext = ioBrokerContext;
     }
 
-    getConnectedServerAsync(): TaskEither<AcaadError, AcaadHost> {
+    getConnectedServerAsync(): Effect.Effect<AcaadHost, AcaadError> {
         const authentication = new AcaadAuthentication("host", "your-username", "your-password", []);
         const host = new AcaadHost("192.168.178.50", 5000, authentication);
 
-        return () => Promise.resolve(E.right(host));
+        return Effect.succeed(host);
     }
 
     getComponentDescriptor(component: unknown): Option<ComponentDescriptor> {
