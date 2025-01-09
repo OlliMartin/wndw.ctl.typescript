@@ -9,7 +9,7 @@ import ConnectionManager from "./ConnectionManager";
 import { AcaadHost } from "./model/connection/AcaadHost";
 import { AcaadAuthentication } from "./model/auth/AcaadAuthentication";
 import { AcaadError } from "./errors/AcaadError";
-import { pipe, Effect } from "effect";
+import { pipe, Effect, Exit, Cause } from "effect";
 import { Option } from "effect/Option";
 
 @injectable()
@@ -48,8 +48,10 @@ export default class ComponentManager {
 
         const result = await Effect.runPromiseExit(callChain);
 
-        // TODO: Implement proper error handling if exit is failed.
-        console.log(result.toJSON());
+        Exit.match(result, {
+            onFailure: (cause) => this._logger.logWarning(`Exited with failure state: ${Cause.pretty(cause)}`),
+            onSuccess: () => {},
+        });
     }
 
     private queryComponentConfigurationAsync(): Effect.Effect<void, AcaadError> {

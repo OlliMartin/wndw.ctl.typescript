@@ -13,10 +13,8 @@ import { AcaadError } from "./errors/AcaadError";
 import { Effect, Context, JSONSchema, Schema, pipe } from "effect";
 import { Option } from "effect/Option";
 import { CalloutError } from "./errors/CalloutError";
-import { ParseError } from "effect/ParseResult";
+
 import { mapLeft } from "effect/Either";
-import { open } from "node:fs";
-import { ParseIssue } from "effect/src/ParseResult";
 
 // Declaring a tag for a service that generates random numbers
 class AxiosSvc extends Context.Tag("axios")<AxiosSvc, { readonly instance: AxiosInstance }>() {}
@@ -43,8 +41,6 @@ const OpenApiDefinitionSchema = Schema.Struct({
         value: PathItemObjectSchema,
     }),
 });
-
-const jsonSchema = JSONSchema.make(OpenApiDefinitionSchema);
 
 @injectable()
 export default class ConnectionManager {
@@ -94,13 +90,14 @@ export default class ConnectionManager {
                 errors: "all",
             });
 
+            // TODO: Should return more specific error. See class "TaggerError" of effect lib as well.
             return pipe(
                 result,
-                mapLeft((error) => new CalloutError(error)), // TODO: Should return more specific error. See class "TaggerError" of effect lib as well.
+                mapLeft((error) => new CalloutError(error)),
             );
         }
 
-        return Effect.fail(new CalloutError("No data received from the server."));
+        return Effect.fail(new CalloutError("No or invalid data received from the server."));
     };
 
     queryComponentConfigurationAsync(host: AcaadHost): Effect.Effect<OpenApiDefinition, AcaadError> {
