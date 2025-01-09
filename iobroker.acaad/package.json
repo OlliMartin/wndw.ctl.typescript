@@ -25,6 +25,7 @@
     "@iobroker/adapter-core": "^3.2.3",
     "@iobroker/types": "^7.0.6",
     "@microsoft/signalr": "^8.0.7",
+    "fp-ts": "^2.16.9",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.8.0"
   },

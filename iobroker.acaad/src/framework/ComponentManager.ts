@@ -1,6 +1,9 @@
 import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
 import IConnectedServiceAdapter from "./interfaces/IConnectedServiceAdapter";
-import Option from "./fp/Option";
+import { Option, map, match } from "fp-ts/Option";
+import * as O from "fp-ts/Option";
+import { either, task, taskEither } from "fp-ts";
+import { pipe } from "fp-ts/function";
 import { OpenApiDefinition } from "./model/open-api/OpenApiDefinition";
 import { AcaadEvent } from "./model/events/AcaadEvent";
 import { inject, injectable } from "tsyringe";
@@ -9,6 +12,8 @@ import { ICsLogger } from "./interfaces/IConnectedServiceContext";
 import ConnectionManager from "./ConnectionManager";
 import { AcaadHost } from "./model/connection/AcaadHost";
 import { AcaadAuthentication } from "./model/auth/AcaadAuthentication";
+import { TaskEither } from "fp-ts/TaskEither";
+import { AcaadError } from "./errors/AcaadError";
 
 @injectable()
 export default class ComponentManager {
@@ -39,20 +44,30 @@ export default class ComponentManager {
             "Syncing components from ACAAD server. This operation will never remove existing states.",
         );
 
-        const config = await this.queryComponentConfigurationAsync();
-        if (config.isSome()) {
-            // Logic to create missing components
-        }
+        const res = await pipe(
+            task.of(2),
+            task.chain((x) => task.of(x + 1)),
+        )();
+
+        const callChain = this.queryComponentConfigurationAsync();
+
+        const result = await callChain();
+        console.log(result);
     }
 
-    private async queryComponentConfigurationAsync(): Promise<Option<OpenApiDefinition>> {
-        const authentication = new AcaadAuthentication("host", "your-username", "your-password", []);
-        const host = new AcaadHost("https://your-host", 443, authentication);
+    private queryComponentConfigurationAsync(): TaskEither<AcaadError, OpenApiDefinition> {
+        const fpTest = pipe(
+            this.serviceAdapter.getConnectedServerAsync(),
+            taskEither.chain(this.connectionManager.queryComponentConfigurationAsync),
+        );
 
-        await this.connectionManager.queryComponentConfigurationAsync(host);
+        return fpTest;
+    }
 
-        // Logic to query component configuration
-        return Option.None<OpenApiDefinition>();
+    private async updateConnectedServiceModelAsync(config: OpenApiDefinition): Promise<void> {
+        const endpoints = Object.values(config.paths).filter((path) => path.acaad);
+
+        this._logger.logInformation(`Configuration received. Processing ${endpoints.length} endpoints.`);
     }
 
     async handleOutboundStateChangeAsync(component: unknown, value: Option<unknown>): Promise<void> {

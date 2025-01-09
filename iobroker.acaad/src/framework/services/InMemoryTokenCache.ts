@@ -1,4 +1,4 @@
-import Option from "../fp/Option";
+import { Option } from "fp-ts/Option";
 import { ITokenCache } from "../interfaces/ITokenCache";
 import { AcaadAuthentication } from "../model/auth/AcaadAuthentication";
 import { OAuth2Token } from "../model/auth/OAuth2Token";

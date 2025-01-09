@@ -5,13 +5,16 @@ import { FrameworkContainer } from "./framework/FrameworkContainer";
 import { IoBrokerCsAdapter } from "./services/IoBroker.ConnectedServiceAdapter";
 import IConnectedServiceAdapter from "./framework/interfaces/IConnectedServiceAdapter";
 import ComponentManager from "./framework/ComponentManager";
-import Option from "./framework/fp/Option";
+
 import { IoBrokerContext } from "./services/IoBroker.Context";
 import { IConnectedServiceContext } from "./framework/interfaces/IConnectedServiceContext";
+import { Option, match } from "fp-ts/Option";
+import * as O from "fp-ts/Option";
+import { pipe } from "fp-ts/function";
 
 class Acaad extends utils.Adapter {
     private _fwkContainer: DependencyContainer;
-    private _componentManager: Option<ComponentManager> = Option.None<ComponentManager>();
+    private _componentManager: Option<ComponentManager> = O.none;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
@@ -39,7 +42,7 @@ class Acaad extends utils.Adapter {
 
     private async onReady(): Promise<void> {
         const instance = this._fwkContainer.resolve(ComponentManager) as ComponentManager;
-        this._componentManager = Option.Some(instance);
+        this._componentManager = O.some(instance);
 
         await instance.startAsync();
         await instance.createMissingComponentsAsync();
@@ -47,14 +50,17 @@ class Acaad extends utils.Adapter {
 
     private async onUnload(callback: () => void): Promise<void> {
         try {
-            this.log.info("Stopping");
-            await this._componentManager.match(
-                (cm) => cm.shutdownAsync(),
-                () => Promise.resolve(),
-            );
+            // TODO: Add AbortController+Signal to limit shutdown duration, if necessary force-stop.
 
-            this._fwkContainer.dispose();
+            await pipe(
+                this._componentManager,
+                match(
+                    () => Promise.resolve(),
+                    (cm) => cm.shutdownAsync(),
+                ),
+            );
         } finally {
+            this._fwkContainer.dispose();
             callback();
         }
     }
