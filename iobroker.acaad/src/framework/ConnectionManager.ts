@@ -10,12 +10,41 @@ import { inject, injectable } from "tsyringe";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 
 import { AcaadError } from "./errors/AcaadError";
-import { Effect, Context } from "effect";
+import { Effect, Context, JSONSchema, Schema, pipe } from "effect";
 import { Option } from "effect/Option";
 import { CalloutError } from "./errors/CalloutError";
+import { ParseError } from "effect/ParseResult";
+import { mapLeft } from "effect/Either";
+import { open } from "node:fs";
+import { ParseIssue } from "effect/src/ParseResult";
 
 // Declaring a tag for a service that generates random numbers
 class AxiosSvc extends Context.Tag("axios")<AxiosSvc, { readonly instance: AxiosInstance }>() {}
+
+const AcaadComponentMetadataSchema = Schema.Struct({
+    type: Schema.String,
+    name: Schema.String,
+});
+
+const AcaadMetadataSchema = Schema.Struct({
+    actionable: Schema.Boolean,
+    queryable: Schema.Boolean,
+    idempotent: Schema.Boolean,
+    component: AcaadComponentMetadataSchema,
+});
+
+const PathItemObjectSchema = Schema.Struct({
+    acaad: AcaadMetadataSchema,
+});
+
+const OpenApiDefinitionSchema = Schema.Struct({
+    paths: Schema.Record({
+        key: Schema.String,
+        value: PathItemObjectSchema,
+    }),
+});
+
+const jsonSchema = JSONSchema.make(OpenApiDefinitionSchema);
 
 @injectable()
 export default class ConnectionManager {
@@ -56,20 +85,19 @@ export default class ConnectionManager {
         return new OAuth2Token(0, "", "", []);
     }
 
-    private static requestApiDefinitionIO = (url: string): Effect.Effect<AxiosResponse<any>, AcaadError, AxiosSvc> =>
-        Effect.tryPromise({
-            try: (abortSignal) => {
-                return axios.get(url, { signal: abortSignal }); // TODO: Does not have instance reference!!
-            },
-            catch: (unknown) => new CalloutError(unknown),
-        });
-
     private static verifyResponsePayload = (
         response: AxiosResponse<any, any>,
     ): Effect.Effect<OpenApiDefinition, AcaadError> => {
         if (response.data) {
-            // TODO: More checks (AJV?) to map api definition
-            return Effect.succeed(response.data);
+            const result = Schema.decodeUnknownEither(OpenApiDefinitionSchema)(response.data, {
+                onExcessProperty: "ignore", // So that I remember it is possible only.
+                errors: "all",
+            });
+
+            return pipe(
+                result,
+                mapLeft((error) => new CalloutError(error)), // TODO: Should return more specific error. See class "TaggerError" of effect lib as well.
+            );
         }
 
         return Effect.fail(new CalloutError("No data received from the server."));
@@ -93,7 +121,9 @@ export default class ConnectionManager {
             Effect.andThen((res) => res),
         );
 
-        return Effect.provideService(result, AxiosSvc, { instance: this.axiosInstance });
+        return Effect.provideService(result, AxiosSvc, {
+            instance: this.axiosInstance,
+        });
     }
 
     async updateComponentStateAsync(metadata: AcaadMetadata, value: Option<unknown>): Promise<void> {

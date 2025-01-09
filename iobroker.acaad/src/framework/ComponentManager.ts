@@ -34,6 +34,9 @@ export default class ComponentManager {
         this._logger = logger;
 
         this.hubConnection = new HubConnectionBuilder().withUrl("https://your-signalr-endpoint").build();
+
+        // TODO: This feels like an anti pattern.. :)
+        this.updateConnectedServiceModelAsync = this.updateConnectedServiceModelAsync.bind(this);
     }
 
     async createMissingComponentsAsync(): Promise<void> {
@@ -43,28 +46,27 @@ export default class ComponentManager {
 
         const callChain = this.queryComponentConfigurationAsync();
 
-        try {
-            await Effect.runPromiseExit(callChain).catch((error) => {
-                this._logger.logError(error, "An unexpected error occurred generating missing components.");
-            });
-        } catch (err) {
-            console.error(err);
-        }
+        const result = await Effect.runPromiseExit(callChain);
+
+        // TODO: Implement proper error handling if exit is failed.
+        console.log(result.toJSON());
     }
 
-    private queryComponentConfigurationAsync(): Effect.Effect<OpenApiDefinition, AcaadError> {
+    private queryComponentConfigurationAsync(): Effect.Effect<void, AcaadError> {
         const callChain = pipe(
             this.serviceAdapter.getConnectedServerAsync(),
             Effect.andThen(this.connectionManager.queryComponentConfigurationAsync),
+            Effect.andThen(this.updateConnectedServiceModelAsync),
         );
 
         return callChain;
     }
 
-    private async updateConnectedServiceModelAsync(config: OpenApiDefinition): Promise<void> {
+    private updateConnectedServiceModelAsync(config: OpenApiDefinition): Effect.Effect<void, AcaadError> {
         const endpoints = Object.values(config.paths).filter((path) => path.acaad);
 
         this._logger.logInformation(`Configuration received. Processing ${endpoints.length} endpoints.`);
+        return Effect.succeed(undefined);
     }
 
     async handleOutboundStateChangeAsync(component: unknown, value: Option<unknown>): Promise<void> {
