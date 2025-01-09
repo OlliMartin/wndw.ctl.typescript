@@ -43,8 +43,13 @@ export default class ComponentManager {
 
         const callChain = this.queryComponentConfigurationAsync();
 
-        const result = await Effect.runPromise(callChain);
-        console.log(result);
+        try {
+            await Effect.runPromiseExit(callChain).catch((error) => {
+                this._logger.logError(error, "An unexpected error occurred generating missing components.");
+            });
+        } catch (err) {
+            console.error(err);
+        }
     }
 
     private queryComponentConfigurationAsync(): Effect.Effect<OpenApiDefinition, AcaadError> {

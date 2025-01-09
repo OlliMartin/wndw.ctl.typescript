@@ -1,6 +1,8 @@
 import { AcaadError } from "./AcaadError";
 
 export class CalloutError extends AcaadError {
+    readonly _tag = "CalloutError";
+
     RequestError: any;
 
     constructor(requestError: any) {

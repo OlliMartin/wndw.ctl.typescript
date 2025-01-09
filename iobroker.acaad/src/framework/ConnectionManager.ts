@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { AcaadMetadata } from "./model/AcaadMetadata";
 
 import { OpenApiDefinition } from "./model/open-api/OpenApiDefinition";
@@ -10,8 +10,12 @@ import { inject, injectable } from "tsyringe";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 
 import { AcaadError } from "./errors/AcaadError";
-import { pipe, Effect } from "effect";
+import { Effect, Context } from "effect";
 import { Option } from "effect/Option";
+import { CalloutError } from "./errors/CalloutError";
+
+// Declaring a tag for a service that generates random numbers
+class AxiosSvc extends Context.Tag("axios")<AxiosSvc, { readonly instance: AxiosInstance }>() {}
 
 @injectable()
 export default class ConnectionManager {
@@ -52,14 +56,24 @@ export default class ConnectionManager {
         return new OAuth2Token(0, "", "", []);
     }
 
-    private static fetchAPI = (url: string) =>
+    private static requestApiDefinitionIO = (url: string): Effect.Effect<AxiosResponse<any>, AcaadError, AxiosSvc> =>
         Effect.tryPromise({
-            try: () => {
-                console.log(url);
-                return axios.get(url); // TODO: Does not have instance reference!!
+            try: (abortSignal) => {
+                return axios.get(url, { signal: abortSignal }); // TODO: Does not have instance reference!!
             },
-            catch: (unknown) => new AcaadError(unknown),
+            catch: (unknown) => new CalloutError(unknown),
         });
+
+    private static verifyResponsePayload = (
+        response: AxiosResponse<any, any>,
+    ): Effect.Effect<OpenApiDefinition, AcaadError> => {
+        if (response.data) {
+            // TODO: More checks (AJV?) to map api definition
+            return Effect.succeed(response.data);
+        }
+
+        return Effect.fail(new CalloutError("No data received from the server."));
+    };
 
     queryComponentConfigurationAsync(host: AcaadHost): Effect.Effect<OpenApiDefinition, AcaadError> {
         this.logger.logDebug(`Querying component configuration from ${host.restBase()}.`);
@@ -67,10 +81,19 @@ export default class ConnectionManager {
         const requestUrl = `${host.restBase()}/${this._openApiEndpoint}`;
         this.logger.logDebug("Using request URL:", requestUrl);
 
-        return pipe(
-            ConnectionManager.fetchAPI(requestUrl),
-            Effect.map((res) => res.data as OpenApiDefinition),
+        const result = AxiosSvc.pipe(
+            Effect.andThen(({ instance }) => {
+                return Effect.tryPromise({
+                    try: (abortSignal) => instance.get(requestUrl, { signal: abortSignal }),
+                    catch: (unknown) => new CalloutError(unknown),
+                });
+            }),
+            Effect.andThen(ConnectionManager.verifyResponsePayload),
+            Effect.tap((res) => this.logger.logDebug("Received configuration", res)),
+            Effect.andThen((res) => res),
         );
+
+        return Effect.provideService(result, AxiosSvc, { instance: this.axiosInstance });
     }
 
     async updateComponentStateAsync(metadata: AcaadMetadata, value: Option<unknown>): Promise<void> {
