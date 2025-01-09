@@ -5,14 +5,19 @@ import { OpenApiDefinition } from "./model/open-api/OpenApiDefinition";
 import { AcaadHost } from "./model/connection/AcaadHost";
 import { OAuth2Token } from "./model/auth/OAuth2Token";
 import { ITokenCache } from "./interfaces/ITokenCache";
+import { ICsLogger } from "./interfaces/IConnectedServiceContext";
+import { inject, injectable } from "tsyringe";
+import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 
+@injectable()
 export default class ConnectionManager {
     private axiosInstance: AxiosInstance;
-    private tokenCache: ITokenCache;
 
-    constructor(tokenCache: ITokenCache) {
+    constructor(
+        @inject(DependencyInjectionTokens.Logger) private logger: ICsLogger,
+        @inject(DependencyInjectionTokens.TokenCache) private tokenCache: ITokenCache,
+    ) {
         this.axiosInstance = axios.create();
-        this.tokenCache = tokenCache;
     }
 
     private async retrieveAuthenticationAsync(): Promise<OAuth2Token> {
@@ -21,6 +26,8 @@ export default class ConnectionManager {
     }
 
     async queryComponentConfigurationAsync(host: AcaadHost): Promise<Option<OpenApiDefinition>> {
+        this.logger?.logInformation(`Querying component configuration from ${host.host}.`);
+
         // Logic to query component configuration
         return Option.None<OpenApiDefinition>();
     }

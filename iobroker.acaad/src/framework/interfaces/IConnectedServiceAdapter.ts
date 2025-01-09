@@ -7,7 +7,7 @@ import { Component } from "../model/Component";
 interface IConnectedServiceAdapter {
     getComponentDescriptor(component: unknown): Option<ComponentDescriptor>;
 
-    getComponentDescriptor(metadata: AcaadComponentMetadata): ComponentDescriptor;
+    getComponentDescriptorByMetadata(metadata: AcaadComponentMetadata): ComponentDescriptor;
 
     transformUnitOfMeasure(uom: AcaadUnitOfMeasure): unknown;
 

@@ -1,9 +1,18 @@
 import * as utils from "@iobroker/adapter-core";
-import "reflect-metadata";
-import { container } from "tsyringe";
-import { TestService } from "./services/TestService";
+
+import { DependencyContainer } from "tsyringe";
+import { FrameworkContainer } from "./framework/FrameworkContainer";
+import { IoBrokerCsAdapter } from "./services/IoBroker.ConnectedServiceAdapter";
+import IConnectedServiceAdapter from "./framework/interfaces/IConnectedServiceAdapter";
+import ComponentManager from "./framework/ComponentManager";
+import Option from "./framework/fp/Option";
+import { IoBrokerContext } from "./services/IoBroker.Context";
+import { IConnectedServiceContext } from "./framework/interfaces/IConnectedServiceContext";
 
 class Acaad extends utils.Adapter {
+    private _fwkContainer: DependencyContainer;
+    private _componentManager: Option<ComponentManager> = Option.None<ComponentManager>();
+
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
             ...options,
@@ -13,41 +22,38 @@ class Acaad extends utils.Adapter {
         this.on("stateChange", this.onStateChange.bind(this));
 
         this.on("unload", this.onUnload.bind(this));
+
+        this._fwkContainer = this.createDiContainer();
+    }
+
+    private createDiContainer(): DependencyContainer {
+        const ioBrokerContext = new IoBrokerContext(this);
+        const contextToken = IoBrokerContext.Token;
+
+        return FrameworkContainer.CreateCsContainer<IConnectedServiceAdapter>({
+            useClass: IoBrokerCsAdapter,
+        })
+            .WithContext<IConnectedServiceContext>(contextToken, ioBrokerContext)
+            .Build();
     }
 
     private async onReady(): Promise<void> {
-        this.log.info("config option1: " + this.config.option1);
-        this.log.info("config option2: " + this.config.option2);
+        const instance = this._fwkContainer.resolve(ComponentManager) as ComponentManager;
+        this._componentManager = Option.Some(instance);
 
-        const instance = container.resolve(TestService) as TestService;
-        instance.LogSomething(this.log);
-
-        /*
-		For every state in the system there has to be also an object of type state
-		Here a simple template for a boolean variable named "testVariable"
-		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
-		*/
-        await this.setObjectNotExistsAsync("testVariable", {
-            type: "state",
-            common: {
-                name: "testVariable",
-                type: "boolean",
-                role: "indicator",
-                read: true,
-                write: true,
-            },
-            native: {},
-        });
-
-        this.subscribeStates("testVariable");
-        await this.setStateAsync("testVariable", true);
+        await instance.startAsync();
+        await instance.createMissingComponentsAsync();
     }
 
-    /**
-     * Is called when adapter shuts down - callback has to be called under any circumstances!
-     */
-    private onUnload(callback: () => void): void {
+    private async onUnload(callback: () => void): Promise<void> {
         try {
+            this.log.info("Stopping");
+            await this._componentManager.match(
+                (cm) => cm.shutdownAsync(),
+                () => Promise.resolve(),
+            );
+
+            this._fwkContainer.dispose();
         } finally {
             callback();
         }

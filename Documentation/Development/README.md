@@ -23,7 +23,7 @@ about the project.
 
 This section describes assumptions made that apply to all integrations, i.e. platforms consuming
 the [Oma.WndwCtrl](https://github.com/OlliMartin/wndw.ctl)
-service ([ioBroker](https://github.com/ioBroker/ioBroker), [HomeAssistant](https://www.home-assistant.io/), ..).
+service ([ioBroker](https://github.com/ioBroker/ioBroker), [HomeAssistant](https://www.home-assistant.io/), ...).
 Additionally, it defines how `ACAAD` is expected to behave to have a common, "set-in-stone" interface between the
 respective services.
 These assumptions may or may not yet be applicable/implemented on `ACAAD` but will be used as reference in
@@ -105,7 +105,7 @@ process, subsequently making it immutable.
 This public key must be stored separately from the configuration and in a (to `ACAAD`) read-only manner.
 As an example, for Windows this MAY be achieved by defining a specific certificate name in the users `Personal` (or
 other) certificate storage that is loaded upon startup and used to verify the signature. If the configuration's validity
-cannot be established, for example because the certificate is not found, the configuration contains no signature, etc,
+cannot be established, for example because the certificate is not found, the configuration contains no signature, etc.,
 `ACAAD` MUST terminate _without_ indicating the root cause.
 
 __EXCEPTION:__ The _only_ exception to the outlined behaviour is if the user actively uses `ACAAD` in _development_
@@ -331,7 +331,7 @@ class IConnectedServiceAdapter {
   <<interface>>
   
   GetComponentDescriptor(component: unknown) Option~ComponentDescriptor~
-  GetComponentDescriptor(metadata: AcaadComponentMetadata) ComponentDescriptor
+  GetComponentDescriptorByMetadata(metadata: AcaadComponentMetadata) ComponentDescriptor
   
   TransformUnitOfMeasure(uom: AcaadUnitOfMeasure) unknown
   TransformComponentValue(value: Option~unknown~) PRIMITIVE
