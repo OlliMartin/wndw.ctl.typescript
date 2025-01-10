@@ -10,11 +10,11 @@ import { inject, injectable } from "tsyringe";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 
 import { AcaadError } from "./errors/AcaadError";
-import { Effect, Context, JSONSchema, Schema, pipe } from "effect";
+import { Effect, Context, Schema, pipe } from "effect";
 import { Option } from "effect/Option";
 import { CalloutError } from "./errors/CalloutError";
 
-import { mapLeft } from "effect/Either";
+import { mapLeft, map } from "effect/Either";
 
 // Declaring a tag for a service that generates random numbers
 class AxiosSvc extends Context.Tag("axios")<AxiosSvc, { readonly instance: AxiosInstance }>() {}
@@ -25,14 +25,19 @@ const AcaadComponentMetadataSchema = Schema.Struct({
 });
 
 const AcaadMetadataSchema = Schema.Struct({
-    actionable: Schema.Boolean,
-    queryable: Schema.Boolean,
-    idempotent: Schema.Boolean,
+    actionable: Schema.UndefinedOr(Schema.Boolean),
+    queryable: Schema.UndefinedOr(Schema.Boolean),
+    idempotent: Schema.UndefinedOr(Schema.Boolean),
     component: AcaadComponentMetadataSchema,
 });
 
+const OperationObjectSchema = Schema.Struct({
+    acaad: Schema.UndefinedOr(AcaadMetadataSchema),
+});
+
 const PathItemObjectSchema = Schema.Struct({
-    acaad: AcaadMetadataSchema,
+    get: Schema.UndefinedOr(OperationObjectSchema),
+    post: Schema.UndefinedOr(OperationObjectSchema),
 });
 
 const OpenApiDefinitionSchema = Schema.Struct({
@@ -53,28 +58,8 @@ export default class ConnectionManager {
         @inject(DependencyInjectionTokens.TokenCache) private tokenCache: ITokenCache,
     ) {
         this.axiosInstance = axios.create();
-
-        // this.transformSuccessInterceptor = this.transformSuccessInterceptor.bind(this);
-        // this.transformErrorInterceptor = this.transformErrorInterceptor.bind(this);
-
-        // this.axiosInstance.interceptors.response.use(this.transformSuccessInterceptor, this.transformErrorInterceptor);
-
         this.queryComponentConfigurationAsync = this.queryComponentConfigurationAsync.bind(this);
     }
-
-    // private transformSuccessInterceptor(response: AxiosResponse<any, any>): AxiosResponse<Either<CalloutError, any>> {
-    //     // TODO: Verify response with AJV?
-    //
-    //     response.data = E.right<CalloutError, unknown>(response.data);
-    //     return response;
-    // }
-    //
-    // private transformErrorInterceptor(error: any): AxiosResponse<Either<CalloutError, unknown>, any> {
-    //     return {
-    //         data: E.left<CalloutError, unknown>(new CalloutError(error)),
-    //         ...error,
-    //     };
-    // }
 
     private async retrieveAuthenticationAsync(): Promise<OAuth2Token> {
         // Logic to retrieve authentication token
@@ -94,6 +79,7 @@ export default class ConnectionManager {
             return pipe(
                 result,
                 mapLeft((error) => new CalloutError(error)),
+                map((val) => new OpenApiDefinition(val.paths)),
             );
         }
 

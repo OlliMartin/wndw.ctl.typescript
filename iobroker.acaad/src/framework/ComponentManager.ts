@@ -9,8 +9,10 @@ import ConnectionManager from "./ConnectionManager";
 import { AcaadHost } from "./model/connection/AcaadHost";
 import { AcaadAuthentication } from "./model/auth/AcaadAuthentication";
 import { AcaadError } from "./errors/AcaadError";
-import { pipe, Effect, Exit, Cause } from "effect";
-import { Option } from "effect/Option";
+import { pipe, Effect, Exit, Cause, Data, Option, GroupBy, Stream, Chunk } from "effect";
+import { getAcaadMetadata, PathItemObject } from "./model/open-api/PathItemObject";
+import { AcaadMetadata } from "./model/AcaadMetadata";
+// import { Option } from "effect/Option";
 
 @injectable()
 export default class ComponentManager {
@@ -34,9 +36,6 @@ export default class ComponentManager {
         this._logger = logger;
 
         this.hubConnection = new HubConnectionBuilder().withUrl("https://your-signalr-endpoint").build();
-
-        // TODO: This feels like an anti pattern.. :)
-        this.updateConnectedServiceModelAsync = this.updateConnectedServiceModelAsync.bind(this);
     }
 
     async createMissingComponentsAsync(): Promise<void> {
@@ -44,34 +43,70 @@ export default class ComponentManager {
             "Syncing components from ACAAD server. This operation will never remove existing states.",
         );
 
-        const callChain = this.queryComponentConfigurationAsync();
+        const flowEff = Effect.gen(this, function* () {
+            const openApi = yield* this.queryComponentConfiguration;
+            const updateResult = yield* this.updateConnectedServiceModel(openApi);
+            return updateResult;
+        });
 
-        const result = await Effect.runPromiseExit(callChain);
+        const result = await Effect.runPromiseExit(flowEff);
 
         Exit.match(result, {
             onFailure: (cause) => this._logger.logWarning(`Exited with failure state: ${Cause.pretty(cause)}`),
-            onSuccess: () => {},
+            onSuccess: () => {
+                this._logger.logInformation("Successfully created missing components.");
+            },
         });
     }
 
-    private queryComponentConfigurationAsync(): Effect.Effect<void, AcaadError> {
-        const callChain = pipe(
-            this.serviceAdapter.getConnectedServerAsync(),
-            Effect.andThen(this.connectionManager.queryComponentConfigurationAsync),
-            Effect.andThen(this.updateConnectedServiceModelAsync),
+    readonly queryComponentConfiguration = Effect.gen(this, function* () {
+        const host = yield* this.serviceAdapter.getConnectedServerAsync();
+        const openApi = yield* this.connectionManager.queryComponentConfigurationAsync(host);
+        console.log(openApi);
+        return openApi;
+    });
+
+    private updateConnectedServiceModel(config: OpenApiDefinition) {
+        const test = Stream.fromIterable(Object.values(config.paths)).pipe(
+            Stream.tap((m) =>
+                pipe(
+                    Effect.succeed(m),
+                    Effect.tap(() => console.log("first", m)),
+                ),
+            ),
+            Stream.flatMap((pathItem) => getAcaadMetadata(pathItem)),
+            Stream.tap((m) =>
+                pipe(
+                    Effect.succeed(m),
+                    Effect.tap(() => console.log("second", m)),
+                ),
+            ),
+            Stream.groupByKey((m) => m.component.name),
+            GroupBy.evaluate((key, stream) =>
+                Stream.fromEffect(
+                    // group stream into chunk (RO)
+                    Stream.runCollect(stream).pipe(
+                        Effect.andThen((values) => {
+                            const pi = Chunk.toArray(values)[0];
+                            console.log(pi);
+                            return this.processSingleComponent(pi);
+                        }),
+                    ),
+                ),
+            ),
         );
 
-        return callChain;
+        return Stream.runCollect(test);
     }
 
-    private updateConnectedServiceModelAsync(config: OpenApiDefinition): Effect.Effect<void, AcaadError> {
-        const endpoints = Object.values(config.paths).filter((path) => path.acaad);
-
-        this._logger.logInformation(`Configuration received. Processing ${endpoints.length} endpoints.`);
-        return Effect.succeed(undefined);
+    private processSingleComponent(metadata: AcaadMetadata): Effect.Effect<number, AcaadError> {
+        return Effect.gen(this, function* () {
+            console.log(metadata.component.type, metadata.component.name);
+            return 42;
+        });
     }
 
-    async handleOutboundStateChangeAsync(component: unknown, value: Option<unknown>): Promise<void> {
+    async handleOutboundStateChangeAsync(component: unknown, value: Option.Option<unknown>): Promise<void> {
         // Logic to handle outbound state change
     }
 
