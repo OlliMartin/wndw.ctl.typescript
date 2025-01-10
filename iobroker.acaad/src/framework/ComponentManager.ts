@@ -42,7 +42,6 @@ export default class ComponentManager {
         this.hubConnection = new HubConnectionBuilder().withUrl("https://your-signalr-endpoint").build();
 
         this.processGroup = this.processGroup.bind(this);
-        this.testEffect = this.testEffect.bind(this);
     }
 
     async createMissingComponentsAsync(): Promise<void> {
@@ -80,7 +79,7 @@ export default class ComponentManager {
             const enumerable = Stream.fromIterable(Object.values(config.paths)).pipe(
                 Stream.flatMap((pathItem) => getAcaadMetadata(pathItem)),
                 Stream.groupByKey((m) => m.component.name),
-                GroupBy.evaluate((key, stream) => this.executeWithSemaphore(key, stream, sem)),
+                GroupBy.evaluate((key, stream) => this.processWithSemaphore(key, stream, sem)),
             );
 
             const result = Stream.runCollect(enumerable);
@@ -88,7 +87,7 @@ export default class ComponentManager {
         });
     }
 
-    private executeWithSemaphore(key: string, stream: Stream.Stream<AcaadMetadata, never, never>, sem: Semaphore) {
+    private processWithSemaphore(key: string, stream: Stream.Stream<AcaadMetadata, never, never>, sem: Semaphore) {
         return Effect.gen(this, function* () {
             const concurrencyLimited = yield* sem.withPermits(1)(this.processGroup(key, stream));
             return concurrencyLimited;
@@ -100,32 +99,25 @@ export default class ComponentManager {
         stream: Stream.Stream<AcaadMetadata, never, never>,
     ): Effect.Effect<string, AcaadError> {
         return Effect.gen(this, function* () {
-            console.log("Processing group", key);
-            const result = yield* this.testEffect(key, stream); // r: Stream<number, AcaadError>
-            return result;
-        });
-    }
+            const result = yield* Stream.runCollect(stream).pipe(
+                Effect.tap((m) => this._logger.logDebug(`Processing component ${key}.`)),
 
-    private testEffect(key: string, stream: Stream.Stream<AcaadMetadata, never, never>) {
-        return Effect.gen(this, function* () {
-            const test = yield* Stream.runCollect(stream).pipe(
-                Effect.tap((m) => console.log("Starting", key)),
                 Effect.andThen((values) => {
                     const pi = Chunk.toArray(values)[0];
                     return this.processSingleComponent(pi);
                 }),
-                Effect.tap((m) => console.log("Finished at", Date.now(), key)),
+
+                Effect.tap((m) => this._logger.logDebug(`Finished processing component ${key}.`)),
             );
 
-            return test;
+            return result;
         });
     }
 
     private processSingleComponent(metadata: AcaadMetadata): Effect.Effect<string, AcaadError> {
         return Effect.gen(this, function* () {
-            console.log("Starting", metadata.component.type, metadata.component.name);
-
             const sleep = yield* Effect.sleep(1000);
+
             const createResult = yield* Effect.tryPromise({
                 try: () => Promise.resolve(100),
                 catch: (error) => new CalloutError(error),
