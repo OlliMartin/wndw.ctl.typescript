@@ -7,13 +7,14 @@ import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 import { ICsLogger } from "./interfaces/IConnectedServiceContext";
 import ConnectionManager from "./ConnectionManager";
 import { AcaadError } from "./errors/AcaadError";
-import { Cause, Chunk, Data, Effect, Exit, GroupBy, Option, Stream } from "effect";
+import { Cause, Chunk, Data, Effect, Either, Exit, GroupBy, Option, Stream } from "effect";
 import { getAcaadMetadata } from "./model/open-api/PathItemObject";
 import { CalloutError } from "./errors/CalloutError";
 import { Semaphore } from "effect/Effect";
 import { Component } from "./model/Component";
 import { AcaadMetadata } from "./model/AcaadMetadata";
 import { ComponentType } from "./model/ComponentType";
+import { equals } from "effect/Equal";
 
 class MetadataByComponent extends Data.Class<{ component: Component; metadata: AcaadMetadata[] }> {}
 
@@ -181,7 +182,64 @@ export default class ComponentManager {
         value: Option.Option<unknown>,
     ): Promise<void> {
         console.log(component, type, value);
-        // Logic to handle outbound state change
+
+        const metadadataFilter = this.getMetadataFilter(type);
+
+        const potentialMetadata = Stream.fromIterable(this._metadataByComponent).pipe(
+            // TODO: Map by name first, later map by component
+            Stream.filter((m) => equals(m.component.name, component.name)),
+            Stream.flatMap((m) => Stream.fromIterable(m.metadata)),
+            Stream.filter(metadadataFilter),
+        );
+
+        const result = await Effect.runPromiseExit(
+            this.getMetadataToExecuteOpt(potentialMetadata).pipe(
+                Effect.andThen((m) => this.connectionManager.updateComponentStateAsync(m)),
+                // TODO: Think about enqueuing the event back for processing ?
+                // Could handle the sync state-change the same way as incoming from signalR if building the endpoint accordingly.
+                // If the inbound changes are queued (very preferable to limit back pressure on adapter/server), this is trivial.
+            ),
+        );
+
+        Exit.match(result, {
+            onFailure: (cause) =>
+                this._logger.logError(
+                    cause,
+                    undefined,
+                    `Outbound state change handling failed for component ${component.name}.`,
+                ),
+            onSuccess: (res) => {
+                this._logger.logInformation(`Successfully update outbound state for component ${component.name}.`, res);
+            },
+        });
+    }
+
+    private getMetadataToExecuteOpt(stream: Stream.Stream<AcaadMetadata>): Effect.Effect<AcaadMetadata, AcaadError> {
+        return Effect.gen(this, function* () {
+            const metadata = yield* Stream.runCollect(stream);
+
+            if (metadata.length == 0) {
+                const msg = "No executabl metadata/endpoint information found for component.";
+                this._logger.logWarning(msg);
+                return yield* Effect.fail(new CalloutError(msg));
+            }
+            if (metadata.length > 1) {
+                const msg = "Identified too many metadata applicable for execution. Do not know what to do.";
+                this._logger.logWarning(msg);
+                return yield* Effect.fail(new CalloutError(msg));
+            }
+
+            return Chunk.toArray(metadata)[0];
+        });
+    }
+
+    private getMetadataFilter(type: ChangeType): (m: AcaadMetadata) => boolean {
+        switch (type) {
+            case "action":
+                return (m) => !!m.actionable;
+            case "query":
+                return (m) => !!m.queryable;
+        }
     }
 
     private async handleSuccessfulStateChangeAsync(): Promise<void> {

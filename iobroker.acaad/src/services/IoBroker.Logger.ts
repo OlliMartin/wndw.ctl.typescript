@@ -1,4 +1,5 @@
 import { ICsLogger } from "../framework/interfaces/IConnectedServiceContext";
+import { Cause } from "effect";
 
 class IoBrokerLogger implements ICsLogger {
     private adapter: ioBroker.Adapter;
@@ -27,9 +28,20 @@ class IoBrokerLogger implements ICsLogger {
         this.log(logCb, data);
     }
 
-    logError(error: Error, ...data: any[]): void {
+    logError(cause?: Cause.Cause<unknown>, error?: Error, ...data: any[]): void {
         const logCb = this.adapter.log?.error;
-        this.log(logCb, [error, ...data]);
+
+        if (cause) {
+            this.log(logCb, [Cause.pretty(cause), ...data]);
+            return;
+        }
+
+        if (error) {
+            this.log(logCb, [error, ...data]);
+            return;
+        }
+
+        this.log(logCb, data);
     }
 
     private log(logCb: (msg: string) => void | undefined, ...data: any[]): void {

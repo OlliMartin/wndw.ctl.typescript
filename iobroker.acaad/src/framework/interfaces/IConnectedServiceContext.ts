@@ -1,3 +1,5 @@
+import { Cause } from "effect";
+
 export interface ICsLogger {
     logTrace(...data: any[]): void;
 
@@ -7,7 +9,7 @@ export interface ICsLogger {
 
     logWarning(...data: any[]): void;
 
-    logError(error: Error, ...data: any[]): void;
+    logError(cause?: Cause.Cause<unknown>, error?: Error, ...data: any[]): void;
 }
 
 export interface IConnectedServiceContext {

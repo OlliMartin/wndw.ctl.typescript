@@ -15,6 +15,7 @@ import { Option } from "effect/Option";
 import { CalloutError } from "./errors/CalloutError";
 
 import { mapLeft, map } from "effect/Either";
+import { AcaadEvent } from "./model/events/AcaadEvent";
 
 // Declaring a tag for a service that generates random numbers
 class AxiosSvc extends Context.Tag("axios")<AxiosSvc, { readonly instance: AxiosInstance }>() {}
@@ -81,7 +82,10 @@ export default class ConnectionManager {
         });
     }
 
-    async updateComponentStateAsync(metadata: AcaadMetadata, value: Option<unknown>): Promise<void> {
-        // Logic to update component state
+    updateComponentStateAsync(metadata: AcaadMetadata): Effect.Effect<AcaadEvent, AcaadError> {
+        return Effect.gen(this, function* () {
+            const event = new AcaadEvent("", "", "");
+            return event;
+        });
     }
 }
