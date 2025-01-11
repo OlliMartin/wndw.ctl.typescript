@@ -66,14 +66,14 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
 
         await this._ioBrokerContext.addObjectAsync(deviceId, component);
 
-        const stateResult = await Promise.all(
-            this.handleComponent(component).map(({ _id: stateId, ...ioBrokerObject }) =>
-                this._ioBrokerContext.extendObjectAsync(`${deviceId}.${stateId}`, ioBrokerObject),
-            ),
-        );
-
         await Promise.all(
-            stateResult.map(({ id: stateId }) => this._ioBrokerContext.addObjectAsync(stateId, component)),
+            this.handleComponent(component).map(async ({ _id: idSuffix, ...ioBrokerObject }) => {
+                const { id: stateId } = await this._ioBrokerContext.extendObjectAsync(
+                    `${deviceId}.${idSuffix}`,
+                    ioBrokerObject,
+                );
+                await this._ioBrokerContext.addObjectAsync(stateId, component);
+            }),
         );
     }
 

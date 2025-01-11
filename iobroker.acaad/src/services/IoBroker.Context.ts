@@ -6,7 +6,6 @@ import { Mutex } from "async-mutex";
 import { ChangeType, OutboundStateChangeCallback } from "../framework/interfaces/IConnectedServiceAdapter";
 import { Option } from "effect";
 import { Actions } from "./IoBroker.Constants";
-import { isNull, isObject, isUndefined } from "effect/Predicate";
 import { isNullOrUndefined } from "../framework/utils/Checks";
 
 @injectable()
