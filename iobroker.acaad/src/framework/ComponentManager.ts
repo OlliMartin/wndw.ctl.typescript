@@ -248,9 +248,9 @@ export default class ComponentManager {
             case "action":
                 return (m) =>
                     !!m.actionable &&
-                    // Match provided value only if the metadata specifically defines a reference value.
+                    // Match provided (CS) value only if the metadata specifically defines a reference value.
                     // If not defined in metadata, ignore value coming from CS.
-                    ((Option.isSome(m.forValue) && equals(m.forValue, v)) || Option.isNone(m.forValue));
+                    (Option.isNone(m.forValue) || (Option.isSome(m.forValue) && equals(m.forValue, v)));
             case "query":
                 return (m) => !!m.queryable;
         }

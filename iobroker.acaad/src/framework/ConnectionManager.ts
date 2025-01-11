@@ -16,6 +16,7 @@ import { CalloutError } from "./errors/CalloutError";
 
 import { mapLeft, map } from "effect/Either";
 import { AcaadEvent } from "./model/events/AcaadEvent";
+import IConnectedServiceAdapter from "./interfaces/IConnectedServiceAdapter";
 
 // Declaring a tag for a service that generates random numbers
 class AxiosSvc extends Context.Tag("axios")<AxiosSvc, { readonly instance: AxiosInstance }>() {}
@@ -29,6 +30,8 @@ export default class ConnectionManager {
     constructor(
         @inject(DependencyInjectionTokens.Logger) private logger: ICsLogger,
         @inject(DependencyInjectionTokens.TokenCache) private tokenCache: ITokenCache,
+        @inject(DependencyInjectionTokens.ConnectedServiceAdapter)
+        private connectedServiceAdapter: IConnectedServiceAdapter,
     ) {
         this.axiosInstance = axios.create();
         this.queryComponentConfigurationAsync = this.queryComponentConfigurationAsync.bind(this);
@@ -62,7 +65,7 @@ export default class ConnectionManager {
     queryComponentConfigurationAsync(host: AcaadHost): Effect.Effect<OpenApiDefinition, AcaadError> {
         this.logger.logDebug(`Querying component configuration from ${host.restBase()}.`);
 
-        const requestUrl = `${host.restBase()}/${this._openApiEndpoint}`;
+        const requestUrl = host.append(this._openApiEndpoint);
         this.logger.logDebug("Using request URL:", requestUrl);
 
         const result = AxiosSvc.pipe(
@@ -82,12 +85,41 @@ export default class ConnectionManager {
         });
     }
 
-    updateComponentStateAsync(metadata: AcaadMetadata): Effect.Effect<AcaadEvent, AcaadError> {
-        return Effect.gen(this, function* () {
-            this.logger.logDebug(`Executing metadata: ${metadata.method}::${metadata.path}`);
+    readonly getHost = Effect.gen(this, function* () {
+        const host = yield* this.connectedServiceAdapter.getConnectedServerAsync();
+        return host;
+    });
 
-            const event = new AcaadEvent("", "", "");
-            return event;
+    private executeComponentRequest(metadata: AcaadMetadata) {
+        return Effect.gen(this, function* () {
+            const host = yield* this.getHost;
+            const { instance } = yield* AxiosSvc;
+
+            const requestUrl = host.append(metadata.path);
+
+            const request: axios.AxiosRequestConfig = {
+                method: metadata.method,
+                url: requestUrl,
+            };
+
+            this.logger.logDebug(`Executing metadata: ${metadata.method}::${requestUrl}`);
+
+            const response = yield* Effect.tryPromise({
+                try: (abortSignal) => instance.request<AcaadEvent>({ ...request, signal: abortSignal }),
+                catch: (unknown) => new CalloutError(unknown),
+            });
+
+            // TODO: Parse + validate event response
+
+            return response.data;
+        });
+    }
+
+    updateComponentStateAsync(metadata: AcaadMetadata): Effect.Effect<AcaadEvent, AcaadError> {
+        const eff = AxiosSvc.pipe(Effect.andThen(this.executeComponentRequest(metadata)));
+
+        return Effect.provideService(eff, AxiosSvc, {
+            instance: this.axiosInstance,
         });
     }
 }
