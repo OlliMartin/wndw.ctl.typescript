@@ -4,4 +4,8 @@ export class ComponentDescriptor {
     constructor(name: string) {
         this.name = name;
     }
+
+    public toIdentifier(): string {
+        return this.name;
+    }
 }

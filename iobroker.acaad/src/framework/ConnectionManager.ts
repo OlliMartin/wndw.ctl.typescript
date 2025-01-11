@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { AcaadMetadata } from "./model/AcaadMetadata";
 
-import { OpenApiDefinition } from "./model/open-api/OpenApiDefinition";
+import { OpenApiDefinition, OpenApiDefinitionSchema, SchemaDefinition } from "./model/open-api/OpenApiDefinition";
 import { AcaadHost } from "./model/connection/AcaadHost";
 import { OAuth2Token } from "./model/auth/OAuth2Token";
 import { ITokenCache } from "./interfaces/ITokenCache";
@@ -18,34 +18,6 @@ import { mapLeft, map } from "effect/Either";
 
 // Declaring a tag for a service that generates random numbers
 class AxiosSvc extends Context.Tag("axios")<AxiosSvc, { readonly instance: AxiosInstance }>() {}
-
-const AcaadComponentMetadataSchema = Schema.Struct({
-    type: Schema.String,
-    name: Schema.String,
-});
-
-const AcaadMetadataSchema = Schema.Struct({
-    actionable: Schema.UndefinedOr(Schema.Boolean),
-    queryable: Schema.UndefinedOr(Schema.Boolean),
-    idempotent: Schema.UndefinedOr(Schema.Boolean),
-    component: AcaadComponentMetadataSchema,
-});
-
-const OperationObjectSchema = Schema.Struct({
-    acaad: Schema.UndefinedOr(AcaadMetadataSchema),
-});
-
-const PathItemObjectSchema = Schema.Struct({
-    get: Schema.UndefinedOr(OperationObjectSchema),
-    post: Schema.UndefinedOr(OperationObjectSchema),
-});
-
-const OpenApiDefinitionSchema = Schema.Struct({
-    paths: Schema.Record({
-        key: Schema.String,
-        value: PathItemObjectSchema,
-    }),
-});
 
 @injectable()
 export default class ConnectionManager {
@@ -72,14 +44,14 @@ export default class ConnectionManager {
         if (response.data) {
             const result = Schema.decodeUnknownEither(OpenApiDefinitionSchema)(response.data, {
                 onExcessProperty: "ignore", // So that I remember it is possible only.
-                errors: "all",
+                // errors: "all",
             });
 
             // TODO: Should return more specific error. See class "TaggerError" of effect lib as well.
             return pipe(
                 result,
                 mapLeft((error) => new CalloutError(error)),
-                map((val) => new OpenApiDefinition(val.paths)),
+                map((val) => OpenApiDefinition.fromSchema(val)),
             );
         }
 

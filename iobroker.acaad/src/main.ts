@@ -8,13 +8,14 @@ import ComponentManager from "./framework/ComponentManager";
 
 import { IoBrokerContext } from "./services/IoBroker.Context";
 import { IConnectedServiceContext } from "./framework/interfaces/IConnectedServiceContext";
-import { Option, match } from "fp-ts/Option";
-import * as O from "fp-ts/Option";
-import { pipe } from "fp-ts/function";
+import { Option, pipe } from "effect";
 
 class Acaad extends utils.Adapter {
     private _fwkContainer: DependencyContainer;
-    private _componentManager: Option<ComponentManager> = O.none;
+    private _componentManager: Option.Option<ComponentManager> = Option.none();
+
+    // Not using Option here for performance reasons.
+    private _context: IoBrokerContext | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
@@ -42,10 +43,10 @@ class Acaad extends utils.Adapter {
 
     private async onReady(): Promise<void> {
         const instance = this._fwkContainer.resolve(ComponentManager) as ComponentManager;
-        this._componentManager = O.some(instance);
+        this._componentManager = Option.some(instance);
 
-        await instance.startAsync();
         await instance.createMissingComponentsAsync();
+        await instance.startAsync();
     }
 
     private async onUnload(callback: () => void): Promise<void> {
@@ -54,10 +55,10 @@ class Acaad extends utils.Adapter {
 
             await pipe(
                 this._componentManager,
-                match(
-                    () => Promise.resolve(),
-                    (cm) => cm.shutdownAsync(),
-                ),
+                Option.match({
+                    onSome: (cm) => cm.shutdownAsync(), // TODO: Add timeout
+                    onNone: () => Promise.resolve(),
+                }),
             );
         } finally {
             this._fwkContainer.dispose();
@@ -65,12 +66,10 @@ class Acaad extends utils.Adapter {
         }
     }
 
-    private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
-        if (state) {
-            this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-        } else {
-            this.log.info(`state ${id} deleted`);
-        }
+    private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
+        await (this._context ??= this._fwkContainer.resolve(
+            IoBrokerContext.Token,
+        ) as IoBrokerContext).onStateChangeAsync(id, state);
     }
 }
 

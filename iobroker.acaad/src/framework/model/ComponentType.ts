@@ -1,5 +1,5 @@
 export enum ComponentType {
-    Button,
-    Switch,
-    Sensor,
+    Button = "button",
+    Sensor = "sensor",
+    Switch = "switch",
 }

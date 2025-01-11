@@ -1,22 +1,21 @@
 import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
-import IConnectedServiceAdapter from "./interfaces/IConnectedServiceAdapter";
+import IConnectedServiceAdapter, { ChangeType } from "./interfaces/IConnectedServiceAdapter";
 import { OpenApiDefinition } from "./model/open-api/OpenApiDefinition";
 import { AcaadEvent } from "./model/events/AcaadEvent";
 import { inject, injectable } from "tsyringe";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 import { ICsLogger } from "./interfaces/IConnectedServiceContext";
 import ConnectionManager from "./ConnectionManager";
-import { AcaadHost } from "./model/connection/AcaadHost";
-import { AcaadAuthentication } from "./model/auth/AcaadAuthentication";
 import { AcaadError } from "./errors/AcaadError";
-import { pipe, Effect, Exit, Cause, Data, Option, GroupBy, Stream, Chunk } from "effect";
-import { getAcaadMetadata, PathItemObject } from "./model/open-api/PathItemObject";
-import { AcaadMetadata } from "./model/AcaadMetadata";
-import { TaggedError } from "effect/Data";
+import { Cause, Chunk, Data, Effect, Exit, GroupBy, Option, Stream } from "effect";
+import { getAcaadMetadata } from "./model/open-api/PathItemObject";
 import { CalloutError } from "./errors/CalloutError";
-import { withPermit, withPermits } from "effect/TSemaphore";
-import { makeSemaphore, Semaphore } from "effect/Effect";
-// import { Option } from "effect/Option";
+import { Semaphore } from "effect/Effect";
+import { Component } from "./model/Component";
+import { AcaadMetadata } from "./model/AcaadMetadata";
+import { ComponentType } from "./model/ComponentType";
+
+class MetadataByComponent extends Data.Class<{ component: Component; metadata: AcaadMetadata[] }> {}
 
 @injectable()
 export default class ComponentManager {
@@ -44,18 +43,16 @@ export default class ComponentManager {
         this.processGroup = this.processGroup.bind(this);
     }
 
+    private flowEff = Effect.gen(this, function* () {
+        const openApi = yield* this.queryComponentConfiguration;
+        const updateResult = yield* this.updateConnectedServiceModel(openApi);
+        return updateResult;
+    });
+
     async createMissingComponentsAsync(): Promise<void> {
-        this._logger.logInformation(
-            "Syncing components from ACAAD server. This operation will never remove existing states.",
-        );
+        this._logger.logInformation("Syncing components from ACAAD server.");
 
-        const flowEff = Effect.gen(this, function* () {
-            const openApi = yield* this.queryComponentConfiguration;
-            const updateResult = yield* this.updateConnectedServiceModel(openApi);
-            return updateResult;
-        });
-
-        const result = await Effect.runPromiseExit(flowEff);
+        const result = await Effect.runPromiseExit(this.flowEff);
 
         Exit.match(result, {
             onFailure: (cause) => this._logger.logWarning(`Exited with failure state: ${Cause.pretty(cause)}`),
@@ -65,29 +62,82 @@ export default class ComponentManager {
         });
     }
 
+    private _componentModel: OpenApiDefinition | null = null;
+    private _metadataByComponent: MetadataByComponent[] = [];
+
+    private generateComponentModel(
+        openApiDefinition: OpenApiDefinition,
+    ): Effect.Effect<OpenApiDefinition, never, never> {
+        return Effect.gen(this, function* () {
+            this._componentModel = openApiDefinition;
+            const tmp = Stream.fromIterable(openApiDefinition.paths).pipe(
+                Stream.flatMap((p) => Stream.fromIterable(p.operations().map((op) => op.acaad))),
+                Stream.filter((acaad) => !!acaad),
+                Stream.groupByKey((m) => m.component.name),
+                GroupBy.evaluate((key: string, stream: Stream.Stream<AcaadMetadata>) =>
+                    Stream.fromEffect(
+                        Stream.runCollect(stream).pipe(
+                            Effect.andThen((chunk) => {
+                                const all = Chunk.toArray(chunk);
+
+                                return new MetadataByComponent({
+                                    component: Component.fromMetadata(all[0]).pipe(
+                                        Option.getOrElse(
+                                            () => new Component({ name: key, type: ComponentType.Button }),
+                                        ),
+                                    ),
+                                    metadata: all,
+                                });
+                            }),
+                        ),
+                    ),
+                ),
+            );
+
+            this._metadataByComponent = Chunk.toArray(yield* Stream.runCollect(tmp));
+
+            return this._componentModel;
+        });
+    }
+
     readonly queryComponentConfiguration = Effect.gen(this, function* () {
         const host = yield* this.serviceAdapter.getConnectedServerAsync();
         const openApi = yield* this.connectionManager.queryComponentConfigurationAsync(host);
-        console.log(openApi);
+
+        this._componentModel = yield* this.generateComponentModel(openApi);
+
         return openApi;
     });
 
     private updateConnectedServiceModel(config: OpenApiDefinition) {
         return Effect.gen(this, function* () {
-            const sem = yield* Effect.makeSemaphore(1);
+            const sem = yield* Effect.makeSemaphore(this.serviceAdapter.getAllowedConcurrency());
 
-            const enumerable = Stream.fromIterable(Object.values(config.paths)).pipe(
-                Stream.flatMap((pathItem) => getAcaadMetadata(pathItem)),
-                Stream.groupByKey((m) => m.component.name),
+            const start = Date.now();
+            this._logger.logInformation("Starting component processing.");
+
+            const enumerable = Stream.fromIterable(Object.entries(config.paths)).pipe(
+                Stream.flatMap(getAcaadMetadata),
+                Stream.map(Component.fromMetadata),
+                // TODO: This is obviously wrong - build a nice error hierarchy!
+                Stream.someOrFail(() => new CalloutError("Failed to create component.")),
+                Stream.groupByKey((m) => m.name),
                 GroupBy.evaluate((key, stream) => this.processWithSemaphore(key, stream, sem)),
             );
 
-            const result = Stream.runCollect(enumerable);
-            return yield* result;
+            const groupedStream = Stream.runCollect(enumerable);
+
+            const result = yield* groupedStream;
+
+            this._logger.logInformation(
+                `Finished component processing for a total of ${result.length} components. This took ${Date.now() - start}ms.`,
+            );
+
+            return result;
         });
     }
 
-    private processWithSemaphore(key: string, stream: Stream.Stream<AcaadMetadata, never, never>, sem: Semaphore) {
+    private processWithSemaphore(key: string, stream: Stream.Stream<Component, AcaadError, never>, sem: Semaphore) {
         return Effect.gen(this, function* () {
             const concurrencyLimited = yield* sem.withPermits(1)(this.processGroup(key, stream));
             return concurrencyLimited;
@@ -96,39 +146,41 @@ export default class ComponentManager {
 
     private processGroup(
         key: string,
-        stream: Stream.Stream<AcaadMetadata, never, never>,
+        stream: Stream.Stream<Component, AcaadError, never>,
     ): Effect.Effect<string, AcaadError> {
         return Effect.gen(this, function* () {
             const result = yield* Stream.runCollect(stream).pipe(
-                Effect.tap((m) => this._logger.logDebug(`Processing component ${key}.`)),
+                Effect.tap((_) => this._logger.logDebug(`Processing component ${key}.`)),
 
                 Effect.andThen((values) => {
-                    const pi = Chunk.toArray(values)[0];
-                    return this.processSingleComponent(pi);
+                    const cmp = Chunk.toArray(values)[0];
+                    return this.processSingleComponent(cmp);
                 }),
 
-                Effect.tap((m) => this._logger.logDebug(`Finished processing component ${key}.`)),
+                Effect.tap((_) => this._logger.logDebug(`Finished processing component ${key}.`)),
             );
 
             return result;
         });
     }
 
-    private processSingleComponent(metadata: AcaadMetadata): Effect.Effect<string, AcaadError> {
+    private processSingleComponent(cmp: Component): Effect.Effect<string, AcaadError> {
         return Effect.gen(this, function* () {
-            const sleep = yield* Effect.sleep(1000);
-
             const createResult = yield* Effect.tryPromise({
-                try: () => Promise.resolve(100),
+                try: () => this.serviceAdapter.createComponentModelAsync(cmp),
                 catch: (error) => new CalloutError(error),
             });
 
-            console.log(metadata.component.type, metadata.component.name, createResult);
-            return metadata.component.name;
+            return cmp.name;
         });
     }
 
-    async handleOutboundStateChangeAsync(component: unknown, value: Option.Option<unknown>): Promise<void> {
+    async handleOutboundStateChangeAsync(
+        component: Component,
+        type: ChangeType,
+        value: Option.Option<unknown>,
+    ): Promise<void> {
+        console.log(component, type, value);
         // Logic to handle outbound state change
     }
 
@@ -143,7 +195,13 @@ export default class ComponentManager {
     async startAsync(): Promise<void> {
         this._logger.logInformation("Starting component manager.");
         // await this.hubConnection.start();
-        // Logic to start the component manager
+
+        await this.serviceAdapter.registerStateChangeCallbackAsync(this.handleOutboundStateChangeAsync);
+
+        this._metadataByComponent.forEach((c) => {
+            console.log(c.component, c.metadata);
+            // c.metadata.forEach(console.log);
+        });
     }
 
     async shutdownAsync(): Promise<void> {
