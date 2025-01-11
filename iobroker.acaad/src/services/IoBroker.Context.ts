@@ -75,7 +75,11 @@ export class IoBrokerContext implements IConnectedServiceContext {
             ? Option.none()
             : Option.some(state?.val);
 
-        await this._outboundStateChangeCallback(triggeredForComponent, changeType, triggerVal);
+        const success = await this._outboundStateChangeCallback(triggeredForComponent, changeType, triggerVal);
+
+        if (success) {
+            await this._adapter.setState(id, { ack: true });
+        }
     }
 
     // Hooray for nested ternaries!

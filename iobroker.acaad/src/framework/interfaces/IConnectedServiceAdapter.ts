@@ -14,7 +14,7 @@ export type OutboundStateChangeCallback = (
     component: Component,
     type: ChangeType,
     value: Option<unknown>,
-) => Promise<void>;
+) => Promise<boolean>;
 
 interface IConnectedServiceAdapter {
     getComponentDescriptor(component: unknown): Option<ComponentDescriptor>;

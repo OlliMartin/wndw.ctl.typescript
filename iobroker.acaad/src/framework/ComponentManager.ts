@@ -184,7 +184,7 @@ export default class ComponentManager {
         component: Component,
         type: ChangeType,
         value: Option.Option<unknown>,
-    ): Promise<void> {
+    ): Promise<boolean> {
         this._logger.logDebug(
             `Handling outbound state (type=${type}) change for component ${component.name} and value ${value}.`,
         );
@@ -222,6 +222,8 @@ export default class ComponentManager {
                 );
             },
         });
+
+        return Exit.isSuccess(result);
     }
 
     private getMetadataToExecuteOpt(stream: Stream.Stream<AcaadMetadata>): Effect.Effect<AcaadMetadata, AcaadError> {
