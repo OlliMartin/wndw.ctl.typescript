@@ -6,6 +6,8 @@ import { Mutex } from "async-mutex";
 import { ChangeType, OutboundStateChangeCallback } from "../framework/interfaces/IConnectedServiceAdapter";
 import { Option } from "effect";
 import { Actions } from "./IoBroker.Constants";
+import { isNull, isObject, isUndefined } from "effect/Predicate";
+import { isNullOrUndefined } from "../framework/utils/Checks";
 
 @injectable()
 export class IoBrokerContext implements IConnectedServiceContext {
@@ -69,7 +71,9 @@ export class IoBrokerContext implements IConnectedServiceContext {
             return;
         }
 
-        const triggerVal: Option.Option<unknown> = state?.val ? Option.some(state?.val) : Option.none();
+        const triggerVal: Option.Option<unknown> = isNullOrUndefined(state?.val)
+            ? Option.none()
+            : Option.some(state?.val);
 
         await this._outboundStateChangeCallback(triggeredForComponent, changeType, triggerVal);
     }

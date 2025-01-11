@@ -15,6 +15,7 @@ import { Component } from "./model/Component";
 import { AcaadMetadata } from "./model/AcaadMetadata";
 import { ComponentType } from "./model/ComponentType";
 import { equals } from "effect/Equal";
+import { isNull, isUndefined } from "effect/Predicate";
 
 class MetadataByComponent extends Data.Class<{ component: Component; metadata: AcaadMetadata[] }> {}
 
@@ -41,6 +42,7 @@ export default class ComponentManager {
 
         this.hubConnection = new HubConnectionBuilder().withUrl("https://your-signalr-endpoint").build();
 
+        this.handleOutboundStateChangeAsync = this.handleOutboundStateChangeAsync.bind(this);
         this.processGroup = this.processGroup.bind(this);
     }
 
@@ -71,6 +73,7 @@ export default class ComponentManager {
     ): Effect.Effect<OpenApiDefinition, never, never> {
         return Effect.gen(this, function* () {
             this._componentModel = openApiDefinition;
+
             const tmp = Stream.fromIterable(openApiDefinition.paths).pipe(
                 Stream.flatMap((p) => Stream.fromIterable(p.operations().map((op) => op.acaad))),
                 Stream.filter((acaad) => !!acaad),
@@ -84,6 +87,7 @@ export default class ComponentManager {
                                 return new MetadataByComponent({
                                     component: Component.fromMetadata(all[0]).pipe(
                                         Option.getOrElse(
+                                            // TODO: Obvious issue..!
                                             () => new Component({ name: key, type: ComponentType.Button }),
                                         ),
                                     ),
@@ -181,13 +185,16 @@ export default class ComponentManager {
         type: ChangeType,
         value: Option.Option<unknown>,
     ): Promise<void> {
+        this._logger.logDebug(
+            `Handling outbound state (type=${type}) change for component ${component.name} and value ${value}.`,
+        );
         console.log(component, type, value);
 
-        const metadadataFilter = this.getMetadataFilter(type);
+        const metadadataFilter = this.getMetadataFilter(type, value);
 
         const potentialMetadata = Stream.fromIterable(this._metadataByComponent).pipe(
             // TODO: Map by name first, later map by component
-            Stream.filter((m) => equals(m.component.name, component.name)),
+            Stream.filter((m) => equals(m.component, component)),
             Stream.flatMap((m) => Stream.fromIterable(m.metadata)),
             Stream.filter(metadadataFilter),
         );
@@ -209,7 +216,10 @@ export default class ComponentManager {
                     `Outbound state change handling failed for component ${component.name}.`,
                 ),
             onSuccess: (res) => {
-                this._logger.logInformation(`Successfully update outbound state for component ${component.name}.`, res);
+                this._logger.logInformation(
+                    `Successfully updated outbound state for component ${component.name}.`,
+                    res,
+                );
             },
         });
     }
@@ -233,10 +243,14 @@ export default class ComponentManager {
         });
     }
 
-    private getMetadataFilter(type: ChangeType): (m: AcaadMetadata) => boolean {
+    private getMetadataFilter(type: ChangeType, v: Option.Option<unknown>): (m: AcaadMetadata) => boolean {
         switch (type) {
             case "action":
-                return (m) => !!m.actionable;
+                return (m) =>
+                    !!m.actionable &&
+                    // Match provided value only if the metadata specifically defines a reference value.
+                    // If not defined in metadata, ignore value coming from CS.
+                    ((Option.isSome(m.forValue) && equals(m.forValue, v)) || Option.isNone(m.forValue));
             case "query":
                 return (m) => !!m.queryable;
         }
@@ -255,11 +269,6 @@ export default class ComponentManager {
         // await this.hubConnection.start();
 
         await this.serviceAdapter.registerStateChangeCallbackAsync(this.handleOutboundStateChangeAsync);
-
-        this._metadataByComponent.forEach((c) => {
-            console.log(c.component, c.metadata);
-            // c.metadata.forEach(console.log);
-        });
     }
 
     async shutdownAsync(): Promise<void> {

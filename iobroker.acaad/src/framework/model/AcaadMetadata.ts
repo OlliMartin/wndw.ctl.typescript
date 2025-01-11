@@ -1,5 +1,7 @@
 import { AcaadComponentMetadata } from "./AcaadComponentManager";
 import { Schema } from "effect";
+import { Option } from "effect";
+import { isNullOrUndefined } from "../utils/Checks";
 
 const AcaadComponentMetadataSchema = Schema.Struct({
     type: Schema.String,
@@ -22,7 +24,7 @@ export class AcaadMetadata {
     public actionable?: boolean;
     public queryable?: boolean;
     public idempotent?: boolean;
-    public forValue?: unknown;
+    public forValue: Option.Option<unknown>;
 
     constructor(
         path: string,
@@ -40,7 +42,7 @@ export class AcaadMetadata {
         this.idempotent = idempotent ?? false;
         this.actionable = actionable ?? false;
         this.queryable = queryable ?? false;
-        this.forValue = forValue;
+        this.forValue = isNullOrUndefined(forValue) ? Option.none<unknown>() : Option.some(forValue);
     }
 
     public static fromSchema(

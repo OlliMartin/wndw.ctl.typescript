@@ -84,6 +84,8 @@ export default class ConnectionManager {
 
     updateComponentStateAsync(metadata: AcaadMetadata): Effect.Effect<AcaadEvent, AcaadError> {
         return Effect.gen(this, function* () {
+            this.logger.logDebug(`Executing metadata: ${metadata.method}::${metadata.path}`);
+
             const event = new AcaadEvent("", "", "");
             return event;
         });
