@@ -27,7 +27,7 @@ interface IConnectedServiceAdapter {
 
     createComponentModelAsync(component: Component): Promise<void>;
 
-    registerStateChangeCallbackAsync(cb: OutboundStateChangeCallback): Promise<void>;
+    registerStateChangeCallbackAsync(cb: OutboundStateChangeCallback, as: AbortSignal): Promise<void>;
 
     updateComponentStateAsync(cd: ComponentDescriptor, obj: unknown): Promise<void>;
 

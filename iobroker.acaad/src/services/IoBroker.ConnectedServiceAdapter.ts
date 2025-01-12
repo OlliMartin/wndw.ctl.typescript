@@ -29,8 +29,8 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
 
     getConnectedServerAsync(): Effect.Effect<AcaadHost, AcaadError> {
         const authentication = new AcaadAuthentication("host", "your-username", "your-password", []);
-        const host = new AcaadHost("192.168.178.50", 5000, authentication);
-        // const host = new AcaadHost("192.168.178.50", 443, authentication);
+        // const host = new AcaadHost("192.168.178.50", 5000, authentication);
+        const host = new AcaadHost("localhost", 5000, authentication);
 
         return Effect.succeed(host);
     }

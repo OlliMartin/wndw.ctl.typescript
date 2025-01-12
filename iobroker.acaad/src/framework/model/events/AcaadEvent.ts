@@ -1,11 +1,20 @@
-export class AcaadEvent {
-    eventType: string;
-    name: string;
-    componentName: string;
+import { Schema } from "effect";
 
-    constructor(eventType: string, name: string, componentName: string) {
-        this.eventType = eventType;
+export const AcaadEventSchema = Schema.Struct({
+    topic: Schema.String,
+    type: Schema.String,
+    name: Schema.String,
+});
+
+// TODO: Make abstract
+export class AcaadEvent {
+    topic: string;
+    type: string;
+    name: string;
+
+    constructor(topic: string, type: string, name: string) {
+        this.topic = topic;
+        this.type = type;
         this.name = name;
-        this.componentName = componentName;
     }
 }

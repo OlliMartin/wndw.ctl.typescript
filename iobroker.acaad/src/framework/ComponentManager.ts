@@ -7,7 +7,7 @@ import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 import { ICsLogger } from "./interfaces/IConnectedServiceContext";
 import ConnectionManager from "./ConnectionManager";
 import { AcaadError } from "./errors/AcaadError";
-import { Cause, Chunk, Data, Effect, Either, Exit, GroupBy, Option, Stream } from "effect";
+import { Cause, Chunk, Data, Effect, Either, Exit, GroupBy, Option, pipe, Stream } from "effect";
 import { getAcaadMetadata } from "./model/open-api/PathItemObject";
 import { CalloutError } from "./errors/CalloutError";
 import { Semaphore } from "effect/Effect";
@@ -15,7 +15,6 @@ import { Component } from "./model/Component";
 import { AcaadMetadata } from "./model/AcaadMetadata";
 import { ComponentType } from "./model/ComponentType";
 import { equals } from "effect/Equal";
-import { isNull, isUndefined } from "effect/Predicate";
 
 class MetadataByComponent extends Data.Class<{ component: Component; metadata: AcaadMetadata[] }> {}
 
@@ -24,8 +23,6 @@ export default class ComponentManager {
     private serviceAdapter: IConnectedServiceAdapter;
     private abortController: AbortController;
     private connectionManager: ConnectionManager;
-
-    private hubConnection: HubConnection;
 
     private _logger: ICsLogger;
 
@@ -39,8 +36,6 @@ export default class ComponentManager {
         this.abortController = new AbortController();
 
         this._logger = logger;
-
-        this.hubConnection = new HubConnectionBuilder().withUrl("https://your-signalr-endpoint").build();
 
         this.handleOutboundStateChangeAsync = this.handleOutboundStateChangeAsync.bind(this);
         this.processGroup = this.processGroup.bind(this);
@@ -193,7 +188,6 @@ export default class ComponentManager {
         const metadadataFilter = this.getMetadataFilter(type, value);
 
         const potentialMetadata = Stream.fromIterable(this._metadataByComponent).pipe(
-            // TODO: Map by name first, later map by component
             Stream.filter((m) => equals(m.component, component)),
             Stream.flatMap((m) => Stream.fromIterable(m.metadata)),
             Stream.filter(metadadataFilter),
@@ -268,15 +262,24 @@ export default class ComponentManager {
 
     async startAsync(): Promise<void> {
         this._logger.logInformation("Starting component manager.");
-        // await this.hubConnection.start();
 
-        await this.serviceAdapter.registerStateChangeCallbackAsync(this.handleOutboundStateChangeAsync);
+        const startEff = pipe(
+            this.connectionManager.startHubConnection,
+            Effect.andThen(
+                Effect.tryPromise({
+                    try: (as) =>
+                        this.serviceAdapter.registerStateChangeCallbackAsync(this.handleOutboundStateChangeAsync, as),
+                    catch: (error) => new CalloutError("An error occurred registering state change callback.", error),
+                }),
+            ),
+        );
+
+        await Effect.runPromiseExit(startEff);
     }
 
     async shutdownAsync(): Promise<void> {
         this._logger.logInformation("Stopping component manager.");
 
-        await this.hubConnection.stop();
         // Logic to shutdown the component manager
     }
 }
