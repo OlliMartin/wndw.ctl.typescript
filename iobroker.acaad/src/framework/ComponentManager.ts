@@ -7,7 +7,7 @@ import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 import { ICsLogger } from "./interfaces/IConnectedServiceContext";
 import ConnectionManager from "./ConnectionManager";
 import { AcaadError } from "./errors/AcaadError";
-import { Cause, Chunk, Data, Effect, Either, Exit, GroupBy, Option, pipe, Stream } from "effect";
+import { Cause, Chunk, Data, Effect, Either, Exit, GroupBy, Option, pipe, Queue, Stream } from "effect";
 import { getAcaadMetadata } from "./model/open-api/PathItemObject";
 import { CalloutError } from "./errors/CalloutError";
 import { Semaphore } from "effect/Effect";
@@ -15,6 +15,7 @@ import { Component } from "./model/Component";
 import { AcaadMetadata } from "./model/AcaadMetadata";
 import { ComponentType } from "./model/ComponentType";
 import { equals } from "effect/Equal";
+import { RuntimeFiber } from "effect/Fiber";
 
 class MetadataByComponent extends Data.Class<{ component: Component; metadata: AcaadMetadata[] }> {}
 
@@ -30,10 +31,12 @@ export default class ComponentManager {
         @inject(DependencyInjectionTokens.ConnectedServiceAdapter) serviceAdapter: IConnectedServiceAdapter,
         @inject(DependencyInjectionTokens.ConnectionManager) connectionManager: ConnectionManager,
         @inject(DependencyInjectionTokens.Logger) logger: ICsLogger,
+        @inject(DependencyInjectionTokens.EventQueue) private eventQueue: Queue.Queue<AcaadEvent>,
     ) {
+        this.abortController = new AbortController();
+
         this.connectionManager = connectionManager;
         this.serviceAdapter = serviceAdapter;
-        this.abortController = new AbortController();
 
         this._logger = logger;
 
@@ -265,6 +268,7 @@ export default class ComponentManager {
 
         const startEff = pipe(
             this.connectionManager.startHubConnection,
+            Effect.andThen(this.startEventListener) /* TODO: How to stop fork ? */,
             Effect.andThen(
                 Effect.tryPromise({
                     try: (as) =>
@@ -275,11 +279,35 @@ export default class ComponentManager {
         );
 
         await Effect.runPromiseExit(startEff);
+
+        // TODO: Handle exit
     }
+
+    private listenerFiber: RuntimeFiber<never, never> | null = null;
+    private startEventListener = Effect.gen(this, function* () {
+        this.listenerFiber = yield* Effect.forkDaemon(this.runEventListener);
+    });
+
+    private runEventListener = Effect.gen(this, function* () {
+        console.log("Starting event queue listener.");
+
+        while (true) {
+            const event = yield* Queue.take(this.eventQueue);
+            console.log("ComponentManager recieved event.", event);
+        }
+    });
+
+    private shutdownEventQueue = Effect.gen(this, function* () {
+        yield* Queue.shutdown(this.eventQueue);
+    });
 
     async shutdownAsync(): Promise<void> {
         this._logger.logInformation("Stopping component manager.");
 
-        // Logic to shutdown the component manager
+        const stopEff = pipe(this.connectionManager.stopHubConnection);
+
+        await Effect.runPromiseExit(stopEff);
+
+        // TODO: Handle exit
     }
 }

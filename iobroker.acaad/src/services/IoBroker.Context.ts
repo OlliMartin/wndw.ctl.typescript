@@ -34,6 +34,8 @@ export class IoBrokerContext implements IConnectedServiceContext {
     }
 
     async registerStateChangeCallbackAsync(cb: OutboundStateChangeCallback): Promise<void> {
+        this.logger.logDebug("Received state change callback. Registering.");
+
         const release = await this.mutex.acquire();
 
         try {

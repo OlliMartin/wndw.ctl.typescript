@@ -7,6 +7,8 @@ import ConnectionManager from "./ConnectionManager";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 import { IConnectedServiceContext } from "./interfaces/IConnectedServiceContext";
 import { InMemoryTokenCache } from "./services/InMemoryTokenCache";
+import { Effect, Queue } from "effect";
+import { AcaadEvent } from "./model/events/AcaadEvent";
 
 @registry([
     { token: ComponentManager, useClass: ComponentManager },
@@ -18,6 +20,10 @@ import { InMemoryTokenCache } from "./services/InMemoryTokenCache";
     {
         token: DependencyInjectionTokens.Logger,
         useFactory: (c) => c.resolve<IConnectedServiceContext>(DependencyInjectionTokens.Context).logger,
+    },
+    {
+        token: DependencyInjectionTokens.EventQueue,
+        useValue: Effect.runSync(Queue.unbounded<AcaadEvent>()), // TODO: Define drop-strategy and set bound for capacity
     },
 ])
 export class FrameworkContainer {

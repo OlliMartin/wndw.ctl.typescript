@@ -10,7 +10,7 @@ import { inject, injectable } from "tsyringe";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 
 import { AcaadError } from "./errors/AcaadError";
-import { Effect, Context, Schema, pipe, Exit } from "effect";
+import { Effect, Context, Schema, pipe, Exit, Queue } from "effect";
 import { CalloutError } from "./errors/CalloutError";
 
 import { mapLeft, map } from "effect/Either";
@@ -41,6 +41,8 @@ export default class ConnectionManager {
         @inject(DependencyInjectionTokens.TokenCache) private tokenCache: ITokenCache,
         @inject(DependencyInjectionTokens.ConnectedServiceAdapter)
         private connectedServiceAdapter: IConnectedServiceAdapter,
+        @inject(DependencyInjectionTokens.EventQueue)
+        private eventQueue: Queue.Queue<AcaadEvent>,
     ) {
         this.axiosInstance = axios.create();
         this.queryComponentConfigurationAsync = this.queryComponentConfigurationAsync.bind(this);
@@ -63,7 +65,7 @@ export default class ConnectionManager {
     });
 
     private async onEventAsync(event: unknown): Promise<void> {
-        const result = await Effect.runPromiseExit(this.onEffectEff(event));
+        const result = await Effect.runPromiseExit(this.onEventEff(event));
 
         Exit.match(result, {
             onFailure: (cause) => this.logger.logError(cause, undefined, `An error occurred processing inbound event.`),
@@ -75,9 +77,12 @@ export default class ConnectionManager {
         console.log(result);
     }
 
-    private onEffectEff(eventUntyped: unknown) {
+    private onEventEff(eventUntyped: unknown) {
         return Effect.gen(this, function* () {
             const event = yield* EventFactory.createEvent(eventUntyped);
+
+            yield* Queue.offer(this.eventQueue, event);
+
             return event;
         });
     }
@@ -91,6 +96,8 @@ export default class ConnectionManager {
             try: () => this.hubConnection?.stop() ?? Promise.resolve(),
             catch: (err) => new CalloutError("Error stopping hub connection", err),
         });
+
+        this.logger.logInformation("Shut down hub connection.");
     });
 
     private async retrieveAuthenticationAsync(): Promise<OAuth2Token> {
