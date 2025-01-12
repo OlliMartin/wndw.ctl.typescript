@@ -16,6 +16,7 @@ import { AcaadMetadata } from "./model/AcaadMetadata";
 import { ComponentType } from "./model/ComponentType";
 import { equals } from "effect/Equal";
 import { RuntimeFiber } from "effect/Fiber";
+import { ComponentCommandOutcomeEvent } from "./model/events/ComponentCommandOutcomeEvent";
 
 class MetadataByComponent extends Data.Class<{ component: Component; metadata: AcaadMetadata[] }> {}
 
@@ -213,10 +214,7 @@ export default class ComponentManager {
                     `Outbound state change handling failed for component ${component.name}.`,
                 ),
             onSuccess: (res) => {
-                this._logger.logInformation(
-                    `Successfully updated outbound state for component ${component.name}.`,
-                    res,
-                );
+                this._logger.logInformation(`Successfully updated outbound state for component ${component.name}.`);
             },
         });
 
@@ -259,8 +257,24 @@ export default class ComponentManager {
         // Logic to handle successful state change
     }
 
-    async handleInboundStateChangeAsync(event: AcaadEvent): Promise<void> {
-        // Logic to handle inbound state change
+    handleInboundStateChangeAsync(event: AcaadEvent) {
+        const isComponentCommandOutcomeEvent = (e: AcaadEvent) => e.name === "ComponentCommandOutcomeEvent";
+
+        return Effect.gen(this, function* () {
+            this._logger.logTrace(`Received event ${event}`);
+
+            if (!isComponentCommandOutcomeEvent(event)) {
+                return;
+            }
+
+            const cc = event as ComponentCommandOutcomeEvent;
+            const cd = this.serviceAdapter.getComponentDescriptorByComponent(cc.component);
+
+            yield* Effect.tryPromise({
+                try: () => this.serviceAdapter.updateComponentStateAsync(cd, cc.outcome),
+                catch: (error) => new CalloutError("An error occurred updating component state.", error),
+            });
+        });
     }
 
     async startAsync(): Promise<void> {
@@ -283,17 +297,26 @@ export default class ComponentManager {
         // TODO: Handle exit
     }
 
-    private listenerFiber: RuntimeFiber<never, never> | null = null;
+    // The listener fiber should NEVER be terminated or fail.
+    // It is absolutely wrong to have an error definition here inside the fiber.
+    // TODO: Let one parent fiber spawn queue workers; let those fail if required and restart again.
+    private listenerFiber: RuntimeFiber<never, AcaadError> | null = null;
     private startEventListener = Effect.gen(this, function* () {
         this.listenerFiber = yield* Effect.forkDaemon(this.runEventListener);
     });
 
     private runEventListener = Effect.gen(this, function* () {
-        console.log("Starting event queue listener.");
+        this._logger.logDebug("Starting event queue listener.");
 
+        // TODO: Check concurrency...
         while (true) {
             const event = yield* Queue.take(this.eventQueue);
-            console.log("ComponentManager recieved event.", event);
+
+            if (event.name === "ComponentCommandOutcomeEvent") {
+                yield* this.handleInboundStateChangeAsync(event);
+            }
+
+            // TODO IMPORTANT: Check recovery from CS failure!!
         }
     });
 

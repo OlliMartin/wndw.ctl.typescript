@@ -10,7 +10,7 @@ import { inject, injectable } from "tsyringe";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 
 import { AcaadError } from "./errors/AcaadError";
-import { Effect, Context, Schema, pipe, Exit, Queue } from "effect";
+import { Effect, Context, Schema, pipe, Exit, Queue, Option } from "effect";
 import { CalloutError } from "./errors/CalloutError";
 
 import { mapLeft, map } from "effect/Either";
@@ -44,7 +44,11 @@ export default class ConnectionManager {
         @inject(DependencyInjectionTokens.EventQueue)
         private eventQueue: Queue.Queue<AcaadEvent>,
     ) {
-        this.axiosInstance = axios.create();
+        this.axiosInstance = axios.create({
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
         this.queryComponentConfigurationAsync = this.queryComponentConfigurationAsync.bind(this);
 
         this.onEventAsync = this.onEventAsync.bind(this);
@@ -70,18 +74,18 @@ export default class ConnectionManager {
         Exit.match(result, {
             onFailure: (cause) => this.logger.logError(cause, undefined, `An error occurred processing inbound event.`),
             onSuccess: (res) => {
-                this.logger.logInformation(`Successfully processed/enqueued event ${res.name}.`, res);
+                this.logger.logTrace(`Successfully processed/enqueued event ${res}.`);
             },
         });
-
-        console.log(result);
     }
 
     private onEventEff(eventUntyped: unknown) {
         return Effect.gen(this, function* () {
             const event = yield* EventFactory.createEvent(eventUntyped);
 
-            yield* Queue.offer(this.eventQueue, event);
+            if (Option.isSome(event)) {
+                yield* Queue.offer(this.eventQueue, event.value);
+            }
 
             return event;
         });
@@ -165,10 +169,12 @@ export default class ConnectionManager {
                 url: requestUrl,
             };
 
-            this.logger.logDebug(`Executing metadata: ${metadata.method}::${requestUrl}`);
+            this.logger.logDebug(`Executing request generated from metadata: ${metadata.method}::${requestUrl}`);
 
             const response = yield* Effect.tryPromise({
-                try: (abortSignal) => instance.request<AcaadEvent>({ ...request, signal: abortSignal }),
+                try: (abortSignal) => {
+                    return instance.request<AcaadEvent>({ ...request, signal: abortSignal });
+                },
                 catch: (unknown) => new CalloutError(unknown),
             });
 

@@ -72,6 +72,7 @@ export class IoBrokerContext implements IConnectedServiceContext {
             return;
         }
 
+        // TODO IMPORTANT: Seems a state being deleted triggers the metadata action /lul.
         const triggerVal: Option.Option<unknown> = isNullOrUndefined(state?.val)
             ? Option.none()
             : Option.some(state?.val);
@@ -79,8 +80,14 @@ export class IoBrokerContext implements IConnectedServiceContext {
         const success = await this._outboundStateChangeCallback(triggeredForComponent, changeType, triggerVal);
 
         if (success) {
-            await this._adapter.setState(id, { ack: true });
+            await this.setStateAsync(id, { ack: true });
         }
+    }
+
+    public async setStateAsync(id: string, val: ioBroker.SettableState): Promise<void> {
+        this.logger.logTrace(`Setting state ${id} to ${JSON.stringify(val)}`);
+
+        await this._adapter.setState(id, { ...val, ack: true });
     }
 
     // Hooray for nested ternaries!

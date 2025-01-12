@@ -1,9 +1,14 @@
 import { ComponentType } from "./ComponentType";
 import { AcaadMetadata } from "./AcaadMetadata";
-import { Data } from "effect";
+import { Data, Schema } from "effect";
 import { Option, some, none } from "effect/Option";
 
 export type ComponentTypes = ButtonComponent | SensorComponent | SwitchComponent;
+
+export const ComponentSchema = Schema.Struct({
+    type: Schema.Enums(ComponentType),
+    name: Schema.String,
+});
 
 export class Component extends Data.Class<{ type: ComponentType; name: string }> {
     static fromMetadata(metadata: AcaadMetadata): Option<Component> {

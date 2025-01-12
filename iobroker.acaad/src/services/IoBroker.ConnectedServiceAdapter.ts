@@ -13,6 +13,7 @@ import { Effect } from "effect";
 import { Option } from "effect/Option";
 import { ComponentType } from "../framework/model/ComponentType";
 import { Actions } from "./IoBroker.Constants";
+import { AcaadOutcome } from "../framework/model/AcaadOutcome";
 
 @singleton()
 @injectable()
@@ -29,8 +30,8 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
 
     getConnectedServerAsync(): Effect.Effect<AcaadHost, AcaadError> {
         const authentication = new AcaadAuthentication("host", "your-username", "your-password", []);
-        // const host = new AcaadHost("192.168.178.50", 5000, authentication);
-        const host = new AcaadHost("localhost", 5000, authentication);
+        const host = new AcaadHost("192.168.178.50", 5000, authentication);
+        // const host = new AcaadHost("localhost", 5000, authentication);
 
         return Effect.succeed(host);
     }
@@ -52,6 +53,15 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
 
     transformComponentValue(value: Option<unknown>): unknown {
         throw new Error("Method not implemented.");
+    }
+
+    async updateComponentStateAsync(cd: ComponentDescriptor, obj: unknown): Promise<void> {
+        // Identifier can be discovered through cd.type inspection? Does this make sense?
+        const stateId = `${cd.toIdentifier()}.Value`;
+
+        await this._ioBrokerContext.setStateAsync(stateId, {
+            val: (obj as AcaadOutcome)?.outcomeRaw ?? "",
+        });
     }
 
     async createComponentModelAsync(component: Component): Promise<void> {
@@ -81,10 +91,6 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
         await this._ioBrokerContext.registerStateChangeCallbackAsync(cb);
     }
 
-    updateComponentStateAsync(cd: ComponentDescriptor, obj: unknown): Promise<void> {
-        throw new Error("Method not implemented.");
-    }
-
     handleComponent(component: ComponentTypes): ioBroker.PartialObject[] {
         switch (component.type) {
             case ComponentType.Button:
@@ -106,7 +112,7 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
                         _id: "Value",
                         type: "state",
                         common: {
-                            type: "number", // TODO -> Only user knows
+                            type: "string", // TODO -> Only user knows
                             role: "state",
                             read: true,
                             write: false,

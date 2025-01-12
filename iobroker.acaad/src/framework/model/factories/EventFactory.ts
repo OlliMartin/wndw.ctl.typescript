@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import {
     ComponentCommandOutcomeEventSchema,
     ComponentCommandOutcomeEvent,
@@ -43,16 +43,31 @@ export const AnyAcaadEventSchema = Schema.Union(
 );
 
 export class EventFactory {
-    public static createEvent(event: unknown): Effect.Effect<AcaadEvent, ParseError> {
+    public static createEvent(event: unknown): Effect.Effect<Option.Option<AcaadEvent>, ParseError> {
         return Effect.gen(function* () {
+            if (
+                !EventFactory.isAcaadEvent(event) ||
+                (event.name != "ComponentCommandOutcomeEvent" && event.name != "ComponentCommandExecutionSucceeded")
+            ) {
+                return Option.none();
+            }
+
             const decoded = yield* Schema.decodeUnknown(AnyAcaadEventSchema)(event);
 
             switch (decoded.name) {
                 case "ComponentCommandOutcomeEvent":
-                    return new ComponentCommandOutcomeEvent(decoded) as AcaadEvent;
+                    return Option.some(new ComponentCommandOutcomeEvent(decoded) as AcaadEvent);
                 case "ComponentCommandExecutionSucceeded":
-                    return new ComponentCommandExecutionSucceeded(decoded) as AcaadEvent;
+                    return Option.some(new ComponentCommandExecutionSucceeded(decoded) as AcaadEvent);
             }
         });
+    }
+
+    private static isAcaadEvent(event: unknown): event is AcaadEvent {
+        return (
+            (event?.hasOwnProperty("name") ?? false) &&
+            (event?.hasOwnProperty("type") ?? false) &&
+            (event?.hasOwnProperty("topic") ?? false)
+        );
     }
 }
