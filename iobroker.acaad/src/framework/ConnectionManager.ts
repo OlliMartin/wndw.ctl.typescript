@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { AcaadMetadata } from "./model/AcaadMetadata";
 
 import { OpenApiDefinition, OpenApiDefinitionSchema, SchemaDefinition } from "./model/open-api/OpenApiDefinition";
@@ -164,7 +164,7 @@ export default class ConnectionManager {
 
             const requestUrl = host.append(metadata.path);
 
-            const request: axios.AxiosRequestConfig = {
+            const request: AxiosRequestConfig = {
                 method: metadata.method,
                 url: requestUrl,
             };

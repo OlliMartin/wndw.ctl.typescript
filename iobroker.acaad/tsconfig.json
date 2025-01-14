@@ -31,10 +31,13 @@
     "inlineSourceMap": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "strict": true
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "node"
   },
   "include": [
     "src/**/*.ts",
+    "src/**/*.cts",
     "test/**/*.ts"
   ],
   "exclude": [

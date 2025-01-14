@@ -1,4 +1,11 @@
 {
-    "require": ["test/mocha.setup.js", "ts-node/register", "source-map-support/register"],
-    "watch-files": ["src/**/*.test.ts"]
+  "$schema": "https://json.schemastore.org/mocharc.json",
+  "require": [
+    "test/mocha.setup.js",
+    "tsx",
+    "source-map-support/register"
+  ],
+  "watch-files": [
+    "src/**/*.test.ts"
+  ]
 }
