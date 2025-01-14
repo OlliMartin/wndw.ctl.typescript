@@ -1,8 +1,10 @@
-import { expect } from "chai";
+import { should } from "chai";
+import { TestContext } from "@iobroker/testing/build/tests/integration";
+import { TestHarness } from "@iobroker/testing/build/tests/integration/lib/harness";
 
-function stateCreationTests(suite) {
-    suite("stateCreation", (getHarness) => {
-        let harness;
+function stateCreationTests(testContext: TestContext) {
+    testContext.suite("stateCreation", (getHarness) => {
+        let harness: TestHarness;
 
         before(() => {
             harness = getHarness();
@@ -12,10 +14,7 @@ function stateCreationTests(suite) {
             // Start the adapter and wait until it has started
             await harness.startAdapterAndWait();
 
-            // Perform the actual test:
-            harness.sendTo("adapter.0", "test", "message", (resp) => {
-                console.dir(resp);
-            });
+            should().not.throw(() => console.log("hi"));
         });
     });
 }

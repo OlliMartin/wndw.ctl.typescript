@@ -1,6 +1,7 @@
 import path from "path";
 import { tests } from "@iobroker/testing";
 import { runTests } from "./integrationTests/";
+import { TestContext } from "@iobroker/testing/build/tests/integration";
 
 // Run integration tests - See https://github.com/ioBroker/testing for a detailed explanation and further options
 tests.integration(path.join(__dirname, ".."), {
@@ -8,7 +9,7 @@ tests.integration(path.join(__dirname, ".."), {
 
     loglevel: "debug",
 
-    defineAdditionalTests({ suite }) {
-        runTests(suite);
+    defineAdditionalTests(testContext: TestContext) {
+        runTests(testContext);
     },
 });
