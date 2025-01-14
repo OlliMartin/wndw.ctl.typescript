@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/mocharc.json",
   "require": [
-    "test/mocha.setup.js",
     "tsx",
+    "test/mocha.setup.ts",
     "source-map-support/register"
   ],
   "watch-files": [
