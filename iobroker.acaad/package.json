@@ -31,8 +31,10 @@
     "tsyringe": "^4.8.0"
   },
   "devDependencies": {
+    "@fakehost/signalr": "^1.0.0-beta.3",
     "@iobroker/adapter-dev": "^1.3.0",
     "@iobroker/testing": "^5.0.0",
+    "@mocks-server/main": "^4.1.0",
     "@tsconfig/node20": "^20.1.4",
     "@types/chai": "^5.0.1",
     "@types/chai-as-promised": "^8.0.1",
@@ -48,6 +50,7 @@
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
+    "fakerest": "^4.1.1",
     "mocha": "^11.0.1",
     "prettier": "^3.4.2",
     "proxyquire": "^2.1.3",
@@ -81,7 +84,8 @@
     "test": "npm run test:ts && npm run test:package",
     "check": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
-    "translate": "translate-adapter"
+    "translate": "translate-adapter",
+    "mocks": "mocks-server"
   },
   "bugs": {
     "url": "https://github.com/OlliMartin/ioBroker.acaad/issues"

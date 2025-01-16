@@ -55,8 +55,11 @@ export default class ConnectionManager {
     }
 
     public startHubConnection = Effect.gen(this, function* () {
-        const host = yield* this.getHost;
-        this.hubConnection = new HubConnectionBuilder().withUrl(host.append(CONST.EVENT_HUB_PATH)).build();
+        // const host = yield* this.getHost;
+        // const signalrUrl = host.append(CONST.EVENT_HUB_PATH);
+        const signalrUrl = "localhost:5000/events";
+
+        this.hubConnection = new HubConnectionBuilder().withUrl(signalrUrl).build();
 
         this.hubConnection.on(CONST.RECEIVE_EVENTS_METHOD, this.onEventAsync);
 
