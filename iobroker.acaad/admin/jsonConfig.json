@@ -1,36 +1,55 @@
 {
-    "i18n": false,
-    "type": "panel",
-    "items": {
-        "textHdr": {
-            "type": "header",
-            "text": "TEXT",
-            "size": 2
+  "i18n": false,
+  "type": "panel",
+  "items": {
+    "tableHdr": {
+      "type": "header",
+      "text": "Hosts",
+      "size": 2
+    },
+    "introTable1Txt1": {
+      "type": "staticText",
+      "text": "This is a classic table with some elements. Add rows by clicking at + sign. <br>Columns Unique Text and Restructured Text have built in validations and error messages.",
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 6,
+      "xl": 6
+    },
+    "targetServices": {
+      "type": "table",
+      "newLine": true,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12,
+      "label": "",
+      "showSecondAddAt": 5,
+      "items": [
+        {
+          "type": "text",
+          "attr": "host",
+          "width": "17% ",
+          "title": "Hostname of Acaad",
+          "tooltip": "Enter the hostname of the ACAAD server",
+          "filter": false,
+          "sort": false,
+          "default": ""
         },
-        "text1": {
-            "type": "text",
-            "label": "Textinput",
-            "newLine": true,
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "numberHdr": {
-            "type": "header",
-            "text": "Service Port",
-            "size": 2
-        },
-        "number1": {
-            "type": "number",
-            "label": "number",
-            "newLine": true,
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
+        {
+          "type": "number",
+          "attr": "port",
+          "width": "16% ",
+          "title": "Port",
+          "tooltip": "enter a number",
+          "filter": false,
+          "sort": false,
+          "min": 0,
+          "step": 1,
+          "default": 443
         }
+      ]
     }
+  }
 }

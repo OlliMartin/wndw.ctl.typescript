@@ -7,13 +7,13 @@ import { ComponentDescriptor } from "../framework/model/ComponentDescriptor";
 import { inject, injectable, singleton } from "tsyringe";
 import { IoBrokerContext } from "./IoBroker.Context";
 import { AcaadHost } from "../framework/model/connection/AcaadHost";
-import { AcaadAuthentication } from "../framework/model/auth/AcaadAuthentication";
 import { AcaadError } from "../framework/errors/AcaadError";
 import { Effect } from "effect";
 import { Option } from "effect/Option";
 import { ComponentType } from "../framework/model/ComponentType";
 import { Actions } from "./IoBroker.Constants";
 import { AcaadOutcome } from "../framework/model/AcaadOutcome";
+import { ConfigurationError } from "../framework/errors/ConfigurationError";
 
 @singleton()
 @injectable()
@@ -29,12 +29,11 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
     }
 
     getConnectedServerAsync(): Effect.Effect<AcaadHost, AcaadError> {
-        const authentication = new AcaadAuthentication("host", "your-username", "your-password", []);
-        // const host = new AcaadHost("192.168.178.50", 5000, authentication);
-        // const host = new AcaadHost("localhost", 5000, authentication);
-        const host = new AcaadHost("localhost", 3100, authentication);
+        const hosts = this._ioBrokerContext.getConfiguredServers();
 
-        return Effect.succeed(host);
+        return hosts.length === 1
+            ? Effect.succeed(hosts[0])
+            : Effect.fail(new ConfigurationError("No hosts configured. Stopping."));
     }
 
     getComponentDescriptor(component: unknown): Option<ComponentDescriptor> {

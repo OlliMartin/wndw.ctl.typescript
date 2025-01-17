@@ -55,13 +55,15 @@ export default class ConnectionManager {
     }
 
     public startHubConnection = Effect.gen(this, function* () {
-        // const host = yield* this.getHost;
-        // const signalrUrl = host.append(CONST.EVENT_HUB_PATH);
-        const signalrUrl = "localhost:5000/events";
+        const host = yield* this.getHost;
+        const signalrUrl = host.appendSignalR(CONST.EVENT_HUB_PATH);
 
-        this.hubConnection = new HubConnectionBuilder().withUrl(signalrUrl).build();
+        this.hubConnection = new HubConnectionBuilder().withAutomaticReconnect().withUrl(signalrUrl).build();
 
         this.hubConnection.on(CONST.RECEIVE_EVENTS_METHOD, this.onEventAsync);
+        this.hubConnection.onclose((err) => {
+            console.log("An error in the hub connection occurred.", err);
+        });
 
         /* TODO/TBD: Should we pass the connection as an effect-svc ? */
 

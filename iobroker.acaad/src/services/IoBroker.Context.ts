@@ -7,6 +7,10 @@ import { ChangeType, OutboundStateChangeCallback } from "../framework/interfaces
 import { Option } from "effect";
 import { Actions } from "./IoBroker.Constants";
 import { isNullOrUndefined } from "../framework/utils/Checks";
+import { AcaadHost } from "../framework/model/connection/AcaadHost";
+import { AcaadAuthentication } from "../framework/model/auth/AcaadAuthentication";
+import { isObject } from "effect/Predicate";
+import { isArray } from "effect/Array";
 
 @injectable()
 export class IoBrokerContext implements IConnectedServiceContext {
@@ -24,6 +28,29 @@ export class IoBrokerContext implements IConnectedServiceContext {
     constructor(adapter: ioBroker.Adapter) {
         this.logger = new IoBrokerLogger(adapter);
         this._adapter = adapter;
+    }
+
+    getConfiguredServers(): AcaadHost[] {
+        let target = this._adapter.config.targetServices;
+        const authFromCfg = this._adapter.config.auth;
+
+        /* Enable int-tests */
+        if (isObject(target) && !isArray(target)) {
+            target = Object.values(target);
+        }
+
+        if (!target) {
+            return [];
+        }
+
+        let auth: AcaadAuthentication | undefined;
+        if (authFromCfg) {
+            auth = new AcaadAuthentication(authFromCfg.tokenUrl, authFromCfg.clientId, authFromCfg.clientSecret, []);
+        }
+
+        const res = target.map((t) => new AcaadHost(t.host, t.port, auth, t.signalrPort));
+
+        return res;
     }
 
     async extendObjectAsync(
@@ -67,7 +94,7 @@ export class IoBrokerContext implements IConnectedServiceContext {
 
         if (!changeType) {
             this.logger.logDebug(
-                `Change type for state ${id} could not be determined. Assuming user-defined state and doing nothing.`,
+                `Change type for state ${id} could not be determined. Assuming user-defined state or update and doing nothing.`,
             );
             return;
         }

@@ -27,6 +27,16 @@ class Acaad extends utils.Adapter {
 
         this.on("unload", this.onUnload.bind(this));
 
+        if (!this.config.targetServices) {
+            this.config.targetServices = [];
+        }
+
+        if (!this.config.auth) {
+            // TODO: Raise an error later.
+            // Here the logger is not yet available.
+            console.log("No auth provided.");
+        }
+
         this._fwkContainer = this.createDiContainer();
     }
 
@@ -45,8 +55,16 @@ class Acaad extends utils.Adapter {
         const instance = this._fwkContainer.resolve(ComponentManager) as ComponentManager;
         this._componentManager = Option.some(instance);
 
-        await instance.createMissingComponentsAsync();
-        await instance.startAsync();
+        // TODO: This error handling is very dumb.
+        // Change to a better matching approach when multiple acaad server can be handled.
+        const componentCreation = await instance.createMissingComponentsAsync();
+
+        if (componentCreation) {
+            await instance.startAsync();
+        } else {
+            console.log("Failed to create components or no server connected.");
+            // TODO: Stop the adapter
+        }
     }
 
     private async onUnload(callback: () => void): Promise<void> {

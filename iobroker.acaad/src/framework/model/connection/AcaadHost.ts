@@ -3,14 +3,21 @@ import { AcaadAuthentication } from "../auth/AcaadAuthentication";
 export class AcaadHost {
     host: string;
     port: number;
-    authentication: AcaadAuthentication;
+    signalrPort: number;
+
+    authentication: AcaadAuthentication | undefined;
 
     protocol: string = "http";
 
     private _restBase: string | undefined = undefined;
+    private _signalrBase: string | undefined = undefined;
 
     restBase(): string {
         return (this._restBase ??= `${this.protocol}://${this.host}:${this.port}`);
+    }
+
+    signalrBase(): string {
+        return (this._signalrBase ??= `${this.protocol}://${this.host}:${this.signalrPort}`);
     }
 
     append(relative: string): string {
@@ -21,9 +28,28 @@ export class AcaadHost {
         return `${this.restBase()}/${relative}`;
     }
 
-    constructor(host: string, port: number, authentication: AcaadAuthentication) {
+    appendSignalR(relative: string): string {
+        if (relative.startsWith("/")) {
+            return `${this.signalrBase()}${relative}`;
+        }
+
+        return `${this.signalrBase()}/${relative}`;
+    }
+
+    constructor(
+        host: string,
+        port: number,
+        authentication: AcaadAuthentication | undefined,
+        signalrPort: number | undefined,
+    ) {
         this.host = host;
         this.port = port;
         this.authentication = authentication;
+
+        if (signalrPort) {
+            this.signalrPort = signalrPort;
+        } else {
+            this.signalrPort = port;
+        }
     }
 }

@@ -51,15 +51,19 @@ export default class ComponentManager {
         return updateResult;
     });
 
-    async createMissingComponentsAsync(): Promise<void> {
+    async createMissingComponentsAsync(): Promise<boolean> {
         this._logger.logInformation("Syncing components from ACAAD server.");
 
         const result = await Effect.runPromiseExit(this.flowEff);
 
-        Exit.match(result, {
-            onFailure: (cause) => this._logger.logWarning(`Exited with failure state: ${Cause.pretty(cause)}`),
+        return Exit.match(result, {
+            onFailure: (cause) => {
+                this._logger.logWarning(`Exited with failure state: ${Cause.pretty(cause)}`);
+                return false;
+            },
             onSuccess: (res) => {
                 this._logger.logInformation("Successfully created missing components.", res);
+                return true;
             },
         });
     }
@@ -103,6 +107,10 @@ export default class ComponentManager {
             return this._componentModel;
         });
     }
+
+    readonly forkPerConnectionServer = Effect.gen(this, function* () {
+        const host = yield* this.serviceAdapter.getConnectedServerAsync();
+    });
 
     readonly queryComponentConfiguration = Effect.gen(this, function* () {
         const host = yield* this.serviceAdapter.getConnectedServerAsync();
@@ -261,7 +269,7 @@ export default class ComponentManager {
         const isComponentCommandOutcomeEvent = (e: AcaadEvent) => e.name === "ComponentCommandOutcomeEvent";
 
         return Effect.gen(this, function* () {
-            this._logger.logTrace(`Received event ${event}`);
+            this._logger.logTrace(`Received event: '${event}'`);
 
             if (!isComponentCommandOutcomeEvent(event)) {
                 return;
@@ -292,9 +300,15 @@ export default class ComponentManager {
             ),
         );
 
-        await Effect.runPromiseExit(startEff);
+        const result = await Effect.runPromiseExit(startEff);
 
-        // TODO: Handle exit
+        Exit.match(result, {
+            onFailure: (cause) =>
+                this._logger.logError(cause, undefined, `An error occurred starting component manager.`),
+            onSuccess: (res) => {
+                this._logger.logInformation(`Started component manager. Listening for events..`);
+            },
+        });
     }
 
     // The listener fiber should NEVER be terminated or fail.
@@ -314,8 +328,10 @@ export default class ComponentManager {
 
             if (event.name === "ComponentCommandOutcomeEvent") {
                 yield* this.handleInboundStateChangeAsync(event);
+                continue;
             }
 
+            this._logger.logTrace(`Discarded unhandlded event: '${event.name}'`);
             // TODO IMPORTANT: Check recovery from CS failure!!
         }
     });
