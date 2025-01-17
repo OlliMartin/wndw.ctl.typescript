@@ -1,6 +1,7 @@
 import { AcaadAuthentication } from "../auth/AcaadAuthentication";
 
 export class AcaadHost {
+    friendlyName: string;
     host: string;
     port: number;
     signalrPort: number;
@@ -36,12 +37,15 @@ export class AcaadHost {
         return `${this.signalrBase()}/${relative}`;
     }
 
+    // TODO: Reorder parameters (auth last)
     constructor(
+        friendlyName: string,
         host: string,
         port: number,
         authentication: AcaadAuthentication | undefined,
         signalrPort: number | undefined,
     ) {
+        this.friendlyName = friendlyName;
         this.host = host;
         this.port = port;
         this.authentication = authentication;

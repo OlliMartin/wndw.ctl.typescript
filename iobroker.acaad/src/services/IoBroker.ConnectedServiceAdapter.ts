@@ -14,25 +14,32 @@ import { ComponentType } from "../framework/model/ComponentType";
 import { Actions } from "./IoBroker.Constants";
 import { AcaadOutcome } from "../framework/model/AcaadOutcome";
 import { ConfigurationError } from "../framework/errors/ConfigurationError";
+import DependencyInjectionTokens from "../framework/model/DependencyInjectionTokens";
+import { ICsLogger } from "../framework/interfaces/IConnectedServiceContext";
 
 @singleton()
 @injectable()
 export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
     private _ioBrokerContext: IoBrokerContext;
+    private _logger: ICsLogger;
 
-    constructor(@inject(IoBrokerContext.Token) ioBrokerContext: IoBrokerContext) {
+    constructor(
+        @inject(IoBrokerContext.Token) ioBrokerContext: IoBrokerContext,
+        @inject(DependencyInjectionTokens.Logger) logger: ICsLogger,
+    ) {
         this._ioBrokerContext = ioBrokerContext;
+        this._logger = logger;
     }
 
     getAllowedConcurrency(): number {
         return 2;
     }
 
-    getConnectedServerAsync(): Effect.Effect<AcaadHost, AcaadError> {
+    getConnectedServersAsync(): Effect.Effect<AcaadHost[], AcaadError> {
         const hosts = this._ioBrokerContext.getConfiguredServers();
 
-        return hosts.length === 1
-            ? Effect.succeed(hosts[0])
+        return hosts.length > 0
+            ? Effect.succeed(hosts)
             : Effect.fail(new ConfigurationError("No hosts configured. Stopping."));
     }
 
@@ -78,10 +85,9 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
 
         await Promise.all(
             this.handleComponent(component).map(async ({ _id: idSuffix, ...ioBrokerObject }) => {
-                const { id: stateId } = await this._ioBrokerContext.extendObjectAsync(
-                    `${deviceId}.${idSuffix}`,
-                    ioBrokerObject,
-                );
+                const sId = `${deviceId}.${idSuffix}`;
+                this._logger.logDebug(`Extending object with identifier '${sId}'.`);
+                const { id: stateId } = await this._ioBrokerContext.extendObjectAsync(sId, ioBrokerObject);
                 await this._ioBrokerContext.addObjectAsync(stateId, component);
             }),
         );

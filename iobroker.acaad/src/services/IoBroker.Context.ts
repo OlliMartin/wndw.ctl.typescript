@@ -48,9 +48,7 @@ export class IoBrokerContext implements IConnectedServiceContext {
             auth = new AcaadAuthentication(authFromCfg.tokenUrl, authFromCfg.clientId, authFromCfg.clientSecret, []);
         }
 
-        const res = target.map((t) => new AcaadHost(t.host, t.port, auth, t.signalrPort));
-
-        return res;
+        return target.map((t) => new AcaadHost(t.name, t.host, t.port, auth, t.signalrPort));
     }
 
     async extendObjectAsync(

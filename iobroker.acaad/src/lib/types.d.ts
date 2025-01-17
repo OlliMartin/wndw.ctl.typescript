@@ -1,4 +1,5 @@
 export interface TargetService {
+    name: string;
     host: string;
     port: number;
     signalrPort: number;

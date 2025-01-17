@@ -31,7 +31,7 @@ interface IConnectedServiceAdapter {
 
     updateComponentStateAsync(cd: ComponentDescriptor, obj: unknown): Promise<void>;
 
-    getConnectedServerAsync(): Effect.Effect<AcaadHost, AcaadError>;
+    getConnectedServersAsync(): Effect.Effect<AcaadHost[], AcaadError>;
 
     getAllowedConcurrency(): number;
 }
