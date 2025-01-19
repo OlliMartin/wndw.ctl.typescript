@@ -10,6 +10,11 @@ const openApi = [
                 options: {
                     status: 200,
                     body: {
+                        info: {
+                            title: "OpenAPI",
+                            version: "1.0.0",
+                            acaad: "commit-hash",
+                        },
                         paths: {
                             "/components/oma-service-status": {
                                 get: {

@@ -31,20 +31,3 @@ export class PathItemObject {
         );
     }
 }
-
-function _w(m: string, oo?: OperationObject) {
-    return {
-        m,
-        oo,
-    };
-}
-
-export function getAcaadMetadata(kvp: [string, PathItemObject]): Stream.Stream<AcaadMetadata> {
-    const [path, pathItemObject] = kvp;
-
-    return pipe(
-        Stream.fromIterable([_w("get", pathItemObject.get), _w("post", pathItemObject.post)]),
-        Stream.filter((op) => !!op?.oo?.acaad),
-        Stream.map((op) => op!.oo!.acaad as AcaadMetadata),
-    );
-}

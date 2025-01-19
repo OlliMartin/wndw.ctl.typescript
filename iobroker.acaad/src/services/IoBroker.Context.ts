@@ -51,6 +51,11 @@ export class IoBrokerContext implements IConnectedServiceContext {
         return target.map((t) => new AcaadHost(t.name, t.host, t.port, auth, t.signalrPort));
     }
 
+    getNamespace(): string {
+        return this._adapter.namespace;
+    }
+
+    // TODO: Use preserver
     async extendObjectAsync(
         objectIdentifier: string,
         partialObject: ioBroker.PartialObject,
@@ -72,14 +77,14 @@ export class IoBrokerContext implements IConnectedServiceContext {
     }
 
     async onStateChangeAsync(id: string, state: ioBroker.State | null | undefined): Promise<void> {
+        if (state?.ack === true) {
+            return;
+        }
+
         const triggeredForComponent: Component | undefined | null = this._componentState[id];
 
         if (!triggeredForComponent) {
             this.logger.logWarning(`State change for unknown component with id ${id}`);
-            return;
-        }
-
-        if (state?.ack === true) {
             return;
         }
 

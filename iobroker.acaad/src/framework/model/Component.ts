@@ -1,7 +1,8 @@
 import { ComponentType } from "./ComponentType";
 import { AcaadMetadata } from "./AcaadMetadata";
-import { Data, Schema } from "effect";
+import { Chunk, Data, Schema } from "effect";
 import { Option, some, none } from "effect/Option";
+import { AcaadPopulatedMetadata, AcaadServerMetadata } from "./open-api/OpenApiDefinition";
 
 export type ComponentTypes = ButtonComponent | SensorComponent | SwitchComponent;
 
@@ -10,15 +11,24 @@ export const ComponentSchema = Schema.Struct({
     name: Schema.String,
 });
 
-export class Component extends Data.Class<{ type: ComponentType; name: string }> {
-    static fromMetadata(metadata: AcaadMetadata): Option<Component> {
-        switch (metadata.component.type) {
+export class Component extends Data.Class<{
+    type: ComponentType;
+    name: string;
+    serverMetadata: AcaadServerMetadata;
+    metadata: Chunk.Chunk<AcaadPopulatedMetadata>;
+}> {
+    // TODO: Let CS decide how the component is created?
+    static fromMetadata(metadata: Chunk.Chunk<AcaadPopulatedMetadata>): Option<Component> {
+        const tmpArray = Chunk.toArray(metadata);
+        const first = tmpArray[0];
+
+        switch (first.component.type) {
             case ComponentType.Button:
-                return some(ButtonComponent.fromMetadataInternal(metadata));
+                return some(ButtonComponent.fromMetadataInternal(first.component.name, first.serverMetadata, metadata));
             case ComponentType.Sensor:
-                return some(SensorComponent.fromMetadataInternal(metadata));
+                return some(SensorComponent.fromMetadataInternal(first.component.name, first.serverMetadata, metadata));
             case ComponentType.Switch:
-                return some(SwitchComponent.fromMetadataInternal(metadata));
+                return some(SwitchComponent.fromMetadataInternal(first.component.name, first.serverMetadata, metadata));
             default:
                 return none();
         }
@@ -26,31 +36,43 @@ export class Component extends Data.Class<{ type: ComponentType; name: string }>
 }
 
 export class ButtonComponent extends Component {
-    constructor(name: string) {
-        super({ type: ComponentType.Button, name });
+    constructor(name: string, serverMetadata: AcaadServerMetadata, metadata: Chunk.Chunk<AcaadPopulatedMetadata>) {
+        super({ type: ComponentType.Button, name, serverMetadata, metadata });
     }
 
-    public static fromMetadataInternal(metadata: AcaadMetadata): Component {
-        return new ButtonComponent(metadata.component.name);
+    public static fromMetadataInternal(
+        name: string,
+        serverMetadata: AcaadServerMetadata,
+        metadata: Chunk.Chunk<AcaadPopulatedMetadata>,
+    ): Component {
+        return new ButtonComponent(name, serverMetadata, metadata);
     }
 }
 
 export class SensorComponent extends Component {
-    constructor(name: string) {
-        super({ type: ComponentType.Sensor, name });
+    constructor(name: string, serverMetadata: AcaadServerMetadata, metadata: Chunk.Chunk<AcaadPopulatedMetadata>) {
+        super({ type: ComponentType.Sensor, name, serverMetadata, metadata });
     }
 
-    public static fromMetadataInternal(metadata: AcaadMetadata): SensorComponent {
-        return new SensorComponent(metadata.component.name);
+    public static fromMetadataInternal(
+        name: string,
+        serverMetadata: AcaadServerMetadata,
+        metadata: Chunk.Chunk<AcaadPopulatedMetadata>,
+    ): Component {
+        return new SensorComponent(name, serverMetadata, metadata);
     }
 }
 
 export class SwitchComponent extends Component {
-    constructor(name: string) {
-        super({ type: ComponentType.Switch, name });
+    constructor(name: string, serverMetadata: AcaadServerMetadata, metadata: Chunk.Chunk<AcaadPopulatedMetadata>) {
+        super({ type: ComponentType.Switch, name, serverMetadata, metadata });
     }
 
-    public static fromMetadataInternal(metadata: AcaadMetadata): SwitchComponent {
-        return new SwitchComponent(metadata.component.name);
+    public static fromMetadataInternal(
+        name: string,
+        serverMetadata: AcaadServerMetadata,
+        metadata: Chunk.Chunk<AcaadPopulatedMetadata>,
+    ): Component {
+        return new SwitchComponent(name, serverMetadata, metadata);
     }
 }

@@ -1,5 +1,6 @@
 export default {
     ConnectionManager: "connection-manager",
+    ComponentModel: "component-model",
     TokenCache: "token-cache",
 
     ConnectedServiceAdapter: "connected-service-adapter",

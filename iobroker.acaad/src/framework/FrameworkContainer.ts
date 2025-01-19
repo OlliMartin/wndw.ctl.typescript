@@ -2,13 +2,13 @@
 import "reflect-metadata";
 
 import { ClassProvider, container, DependencyContainer, RegistrationOptions, registry, InjectionToken } from "tsyringe";
-import ComponentManager from "./ComponentManager";
+import ComponentManager, { ComponentModel } from "./ComponentManager";
 import ConnectionManager from "./ConnectionManager";
 import DependencyInjectionTokens from "./model/DependencyInjectionTokens";
 import { IConnectedServiceContext } from "./interfaces/IConnectedServiceContext";
 import { InMemoryTokenCache } from "./services/InMemoryTokenCache";
 import { Effect, Queue } from "effect";
-import { AcaadEvent } from "./model/events/AcaadEvent";
+import { AcaadEvent, AcaadPopulatedEvent } from "./model/events/AcaadEvent";
 
 @registry([
     { token: ComponentManager, useClass: ComponentManager },
@@ -23,8 +23,9 @@ import { AcaadEvent } from "./model/events/AcaadEvent";
     },
     {
         token: DependencyInjectionTokens.EventQueue,
-        useValue: Effect.runSync(Queue.unbounded<AcaadEvent>()), // TODO: Define drop-strategy and set bound for capacity
+        useValue: Effect.runSync(Queue.unbounded<AcaadPopulatedEvent>()), // TODO: Define drop-strategy and set bound for capacity
     },
+    { token: DependencyInjectionTokens.ComponentModel, useClass: ComponentModel },
 ])
 export class FrameworkContainer {
     private static Container: DependencyContainer = container;

@@ -54,9 +54,7 @@ class Acaad extends utils.Adapter {
     private async onReady(): Promise<void> {
         const instance = this._fwkContainer.resolve(ComponentManager) as ComponentManager;
         this._componentManager = Option.some(instance);
-
-        // TODO: This error handling is very dumb.
-        // Change to a better matching approach when multiple acaad server can be handled.
+        
         const componentCreation = await instance.createMissingComponentsAsync();
 
         if (componentCreation) {

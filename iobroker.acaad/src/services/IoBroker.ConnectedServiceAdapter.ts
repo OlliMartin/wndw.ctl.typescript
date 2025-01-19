@@ -16,6 +16,14 @@ import { AcaadOutcome } from "../framework/model/AcaadOutcome";
 import { ConfigurationError } from "../framework/errors/ConfigurationError";
 import DependencyInjectionTokens from "../framework/model/DependencyInjectionTokens";
 import { ICsLogger } from "../framework/interfaces/IConnectedServiceContext";
+import { AcaadServerMetadata } from "../framework/model/open-api/OpenApiDefinition";
+
+const STATE_SUFFIXES = {
+    ACAAD_VERSION: "acaadVersion",
+    CONNECTED: "connected",
+    NAME: "name",
+    REACHABLE: "reachable",
+};
 
 @singleton()
 @injectable()
@@ -29,6 +37,20 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
     ) {
         this._ioBrokerContext = ioBrokerContext;
         this._logger = logger;
+    }
+
+    async onServerConnectedAsync(server: AcaadHost): Promise<void> {
+        const device = this.getDevicePrefix(server);
+        const connectedState = `${device}.${STATE_SUFFIXES.CONNECTED}`;
+
+        await this._ioBrokerContext.setStateAsync(connectedState, { val: true });
+    }
+
+    async onServerDisconnectedAsync(server: AcaadHost): Promise<void> {
+        const device = this.getDevicePrefix(server);
+        const connectedState = `${device}.${STATE_SUFFIXES.CONNECTED}`;
+
+        await this._ioBrokerContext.setStateAsync(connectedState, { val: false });
     }
 
     getAllowedConcurrency(): number {
@@ -47,8 +69,13 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
         throw new Error("Method not implemented.");
     }
 
+    getDevicePrefix(host: AcaadHost): string {
+        return this._ioBrokerContext.escapeComponentName(host.friendlyName);
+    }
+
     getComponentDescriptorByComponent(component: Component): ComponentDescriptor {
-        const escapedName = this._ioBrokerContext.escapeComponentName(component.name);
+        const deviceName = `${this.getDevicePrefix(component.serverMetadata.host)}.${component.name}`;
+        const escapedName = this._ioBrokerContext.escapeComponentName(deviceName);
 
         // Put into correct subgroup and stuff
         return new ComponentDescriptor(escapedName);
@@ -71,22 +98,97 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
         });
     }
 
+    async createServerMetadataAsync(deviceId: string, serverMetadata: AcaadServerMetadata): Promise<void> {
+        const extendObjects: ioBroker.PartialObject[] = [
+            {
+                _id: STATE_SUFFIXES.NAME,
+                type: "state",
+                common: {
+                    type: "string",
+                    name: "Servername",
+                    read: true,
+                    write: false,
+                    def: serverMetadata.host.friendlyName,
+                    desc: "The name of the server as provided by the server itself.",
+                },
+            },
+            {
+                _id: STATE_SUFFIXES.ACAAD_VERSION,
+                type: "state",
+                common: {
+                    type: "string",
+                    name: "Source Version",
+                    read: true,
+                    write: false,
+                    def: serverMetadata.info.acaad,
+                    desc: "Git commit hash of the acaad server binary",
+                },
+            },
+            {
+                _id: STATE_SUFFIXES.REACHABLE,
+                type: "state",
+                common: {
+                    type: "boolean",
+                    name: "Reachable",
+                    desc: "True iff the configuration was synced from the server at least once.",
+                    read: true,
+                    write: false,
+                    def: true,
+                },
+            },
+            {
+                _id: STATE_SUFFIXES.CONNECTED,
+                type: "state",
+                common: {
+                    type: "boolean",
+                    name: "Connected",
+                    desc: "True if the adapter is currently connected to the server and listening for events.",
+                    read: true,
+                    write: false,
+                    def: false,
+                },
+            },
+        ];
+
+        this._logger.logTrace(`Creating ${extendObjects.length} metadata records for device '${deviceId}'.`);
+
+        await Promise.all(
+            extendObjects.map(({ _id: suffix, ...payload }) =>
+                this._ioBrokerContext.extendObjectAsync(`${deviceId}.${suffix}`, payload),
+            ),
+        );
+    }
+
+    async createServerModelAsync(server: AcaadServerMetadata): Promise<void> {
+        const deviceId = this.getDevicePrefix(server.host);
+
+        await this._ioBrokerContext.extendObjectAsync(deviceId, {
+            type: "device",
+            common: {
+                name: server.host.friendlyName,
+                statusStates: {
+                    onlineId: `${this._ioBrokerContext.getNamespace()}.${deviceId}.${STATE_SUFFIXES.CONNECTED}`,
+                },
+            },
+        });
+
+        await this.createServerMetadataAsync(deviceId, server);
+    }
+
     async createComponentModelAsync(component: Component): Promise<void> {
         const componentDescriptor = this.getComponentDescriptorByComponent(component);
 
         const { id: deviceId } = await this._ioBrokerContext.extendObjectAsync(componentDescriptor.toIdentifier(), {
-            type: "device",
+            type: "channel",
             common: {
                 name: component.type,
             },
         });
 
-        await this._ioBrokerContext.addObjectAsync(deviceId, component);
-
         await Promise.all(
             this.handleComponent(component).map(async ({ _id: idSuffix, ...ioBrokerObject }) => {
                 const sId = `${deviceId}.${idSuffix}`;
-                this._logger.logDebug(`Extending object with identifier '${sId}'.`);
+                this._logger.logTrace(`Extending object with identifier: '${sId}'.`);
                 const { id: stateId } = await this._ioBrokerContext.extendObjectAsync(sId, ioBrokerObject);
                 await this._ioBrokerContext.addObjectAsync(stateId, component);
             }),

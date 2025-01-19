@@ -7,6 +7,7 @@ import { AcaadHost } from "../model/connection/AcaadHost";
 import { AcaadError } from "../errors/AcaadError";
 import { Effect } from "effect";
 import { Option } from "effect/Option";
+import { AcaadHostMapping, AcaadServerMetadata } from "../model/open-api/OpenApiDefinition";
 
 export type ChangeType = "action" | "query";
 
@@ -25,12 +26,19 @@ interface IConnectedServiceAdapter {
 
     transformComponentValue(value: Option<unknown>): unknown;
 
+    createServerModelAsync(server: AcaadServerMetadata): Promise<void>;
+
+    onServerConnectedAsync(server: AcaadHost): Promise<void>;
+
+    onServerDisconnectedAsync(server: AcaadHost): Promise<void>;
+
     createComponentModelAsync(component: Component): Promise<void>;
 
     registerStateChangeCallbackAsync(cb: OutboundStateChangeCallback, as: AbortSignal): Promise<void>;
 
     updateComponentStateAsync(cd: ComponentDescriptor, obj: unknown): Promise<void>;
 
+    // TODO: Change to promise (keep the effect-ts stuff internal)
     getConnectedServersAsync(): Effect.Effect<AcaadHost[], AcaadError>;
 
     getAllowedConcurrency(): number;

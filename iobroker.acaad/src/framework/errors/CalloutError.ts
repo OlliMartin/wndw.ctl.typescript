@@ -1,7 +1,7 @@
 import { AcaadError } from "./AcaadError";
 
 export class CalloutError extends AcaadError {
-    readonly _tag = "CalloutError";
+    public _tag = "CalloutError";
 
     RequestError: any;
     CaughtError: unknown;
