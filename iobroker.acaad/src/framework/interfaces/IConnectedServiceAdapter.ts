@@ -18,13 +18,9 @@ export type OutboundStateChangeCallback = (
 ) => Promise<boolean>;
 
 interface IConnectedServiceAdapter {
-    getComponentDescriptor(component: unknown): Option<ComponentDescriptor>;
-
     getComponentDescriptorByComponent(component: Component): ComponentDescriptor;
 
     transformUnitOfMeasure(uom: AcaadUnitOfMeasure): unknown;
-
-    transformComponentValue(value: Option<unknown>): unknown;
 
     createServerModelAsync(server: AcaadServerMetadata): Promise<void>;
 

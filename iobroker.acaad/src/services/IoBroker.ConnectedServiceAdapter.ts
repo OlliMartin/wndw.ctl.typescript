@@ -65,10 +65,6 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
             : Effect.fail(new ConfigurationError("No hosts configured. Stopping."));
     }
 
-    getComponentDescriptor(component: unknown): Option<ComponentDescriptor> {
-        throw new Error("Method not implemented.");
-    }
-
     getDevicePrefix(host: AcaadHost): string {
         return this._ioBrokerContext.escapeComponentName(host.friendlyName);
     }
@@ -77,15 +73,10 @@ export class IoBrokerCsAdapter implements IConnectedServiceAdapter {
         const deviceName = `${this.getDevicePrefix(component.serverMetadata.host)}.${component.name}`;
         const escapedName = this._ioBrokerContext.escapeComponentName(deviceName);
 
-        // Put into correct subgroup and stuff
         return new ComponentDescriptor(escapedName);
     }
 
     transformUnitOfMeasure(uom: AcaadUnitOfMeasure): unknown {
-        throw new Error("Method not implemented.");
-    }
-
-    transformComponentValue(value: Option<unknown>): unknown {
         throw new Error("Method not implemented.");
     }
 

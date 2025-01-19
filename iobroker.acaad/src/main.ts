@@ -54,13 +54,13 @@ class Acaad extends utils.Adapter {
     private async onReady(): Promise<void> {
         const instance = this._fwkContainer.resolve(ComponentManager) as ComponentManager;
         this._componentManager = Option.some(instance);
-        
+
         const componentCreation = await instance.createMissingComponentsAsync();
 
         if (componentCreation) {
             await instance.startAsync();
         } else {
-            console.log("Failed to create components or no server connected.");
+            console.log("Failed to create components.");
             // TODO: Stop the adapter
         }
     }
@@ -68,6 +68,7 @@ class Acaad extends utils.Adapter {
     private async onUnload(callback: () => void): Promise<void> {
         try {
             // TODO: Add AbortController+Signal to limit shutdown duration, if necessary force-stop.
+            // Alternatively, fork (?) an effect and race it as timeout.
 
             await pipe(
                 this._componentManager,

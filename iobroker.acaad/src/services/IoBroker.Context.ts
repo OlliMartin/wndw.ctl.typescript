@@ -60,7 +60,7 @@ export class IoBrokerContext implements IConnectedServiceContext {
         objectIdentifier: string,
         partialObject: ioBroker.PartialObject,
     ): ioBroker.SetObjectPromise {
-        return await this._adapter.extendObject(objectIdentifier, partialObject);
+        return await this._adapter.extendObject(objectIdentifier, partialObject, { preserve: { common: ["name"] } });
     }
 
     async registerStateChangeCallbackAsync(cb: OutboundStateChangeCallback): Promise<void> {
