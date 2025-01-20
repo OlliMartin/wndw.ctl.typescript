@@ -28,7 +28,6 @@ jobs:
     steps:
       - name: Check/Lint adapter
         uses: ioBroker/testing-action-check@v1
-        working-directory: './iobroker.acaad'
         with:
           node-version: '20.x'
           type-checking: true
